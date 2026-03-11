@@ -112,23 +112,39 @@
             return Math.round(weight / (1.0278 - (0.0278 * reps)));
         }
 
+        function sanitizeRepValue(rawValue) {
+            const parsed = Number.parseInt(rawValue, 10);
+            if (Number.isNaN(parsed) || parsed < 0) return 0;
+            return parsed;
+        }
+
         // --- XP & STREAK LOGIC ---
         function getStreakInfo() {
             if (sessions.length === 0) return 0;
-            let streak = 0;
-            const sorted = [...sessions].sort((a, b) => b.timestamp - a.timestamp);
-            const now = Date.now();
-            let lastTime = now;
 
-            for (let s of sorted) {
-                const diff = (lastTime - s.timestamp) / (1000 * 60 * 60 * 24);
-                if (diff <= 3.5) { // Within 3.5 days (buffer for "every other day" logic)
+            const msPerDay = 1000 * 60 * 60 * 24;
+            const uniqueDayStarts = [...new Set(
+                sessions
+                    .map(s => {
+                        const d = new Date(s.timestamp);
+                        return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+                    })
+            )].sort((a, b) => b - a);
+
+            let streak = 0;
+            let lastDayStart = new Date();
+            lastDayStart = new Date(lastDayStart.getFullYear(), lastDayStart.getMonth(), lastDayStart.getDate()).getTime();
+
+            for (const dayStart of uniqueDayStarts) {
+                const diffDays = (lastDayStart - dayStart) / msPerDay;
+                if (diffDays <= 3.5) { // Allows every-other-day training cadence with a small buffer
                     streak++;
-                    lastTime = s.timestamp;
+                    lastDayStart = dayStart;
                 } else {
                     break;
                 }
             }
+
             return streak;
         }
 
@@ -272,7 +288,7 @@
                         return `
                         <div class="flex flex-col items-center gap-1">
                             <span class="text-[8px] font-black uppercase text-slate-500">${isAmrap ? 'AMRAP' : 'SET ' + (i+1)}</span>
-                            <input type="number" value="${r}" onchange="activeSession.${tierKey}.reps[${i}]=parseInt(this.value)" 
+                            <input type="number" min="0" value="${r}" onchange="activeSession.${tierKey}.reps[${i}] = sanitizeRepValue(this.value); this.value = activeSession.${tierKey}.reps[${i}]" 
                                    class="w-full h-12 bg-black/40 border-2 ${isAmrap ? 'amrap-input' : 'border-slate-800'} rounded-xl text-center text-xl font-black italic text-white outline-none">
                         </div>`;
                     }).join('')}
