@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>GZCLP RPG Tracker (Self-Contained)</title>
+        <meta name="theme-color" content="#0f172a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="GZCLP">
+    <style>
+        :root { --bg-deep: #05070a; --bg-card: #0f172a; --accent: #6366f1; --amrap: #f59e0b; --text-main: #e2e8f0; --text-muted:#94a3b8; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; -webkit-tap-highlight-color: transparent; background: radial-gradient(circle at top, #1e293b 0%, #05070a 45%); color: var(--text-main); }
+        .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace; }
+        .glass-card { background: linear-gradient(145deg, rgba(30, 41, 59, 0.78), rgba(15, 23, 42, 0.9)); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.08); box-shadow: 0 10px 28px rgba(2,6,23,.35); }
+        .progress-glow { box-shadow: 0 0 20px rgba(99, 102, 241, 0.3); }
+        @keyframes pulse-red {
+            0% { box-shadow: 0 0 0 0 rgba(244, 63, 94, 0.7); }
+            70% { box-shadow: 0 0 0 20px rgba(244, 63, 94, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(244, 63, 94, 0); }
+        }
+        .timer-complete { animation: pulse-red 2s infinite; background-color: #e11d48 !important; }
+        .amrap-input { border-color: var(--amrap) !important; color: var(--amrap) !important; box-shadow: 0 0 10px rgba(245, 158, 11, 0.2); }
+        .streak-fire { filter: drop-shadow(0 0 8px #f59e0b); }
+    
+
+        /* Single-file fallback layout when Tailwind CDN is unavailable */
+        body {
+            margin: 0;
+            padding-bottom: calc(9rem + env(safe-area-inset-bottom));
+        }
+        header, main, nav { max-width: 480px; margin: 0 auto; }
+        header {
+            position: sticky;
+            top: 0;
+            background: linear-gradient(180deg, rgba(15,23,42,.96), rgba(15,23,42,.88));
+            border-bottom: 1px solid rgba(255,255,255,.08);
+            padding: 1rem;
+            z-index: 30;
+        }
+        main {
+            padding: 1rem;
+            padding-bottom: calc(12rem + env(safe-area-inset-bottom));
+        }
+        #app-content {
+            padding: 0;
+            padding-bottom: calc(10rem + env(safe-area-inset-bottom));
+        }
+        #rest-timer-ui {
+            bottom: calc(7rem + env(safe-area-inset-bottom));
+        }
+        nav {
+            position: fixed;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            display: grid;
+            grid-template-columns: repeat(3,1fr);
+            gap: .5rem;
+            padding: .75rem 1rem calc(.9rem + env(safe-area-inset-bottom));
+            background: linear-gradient(180deg, rgba(15,23,42,.94), rgba(15,23,42,.99));
+            border-top: 1px solid rgba(255,255,255,.08);
+            z-index: 40;
+        }
+        nav button {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: .25rem;
+            min-height: 2.75rem;
+            background: transparent;
+            border: 0;
+            color: #94a3b8;
+            font-weight: 700;
+            font-size: .7rem;
+        }
+        section, .glass-card {
+            border-radius: 1rem;
+            padding: 1rem;
+            background: rgba(30, 41, 59, 0.7);
+        }
+        button {
+            cursor: pointer;
+            -webkit-appearance: none;
+            appearance: none;
+            transition: transform .12s ease, opacity .2s ease, filter .2s ease;
+        }
+        button:active { transform: scale(.98); }
+        button:hover { filter: brightness(1.06); }
+        input[type="number"] {
+            background: #0b1220 !important;
+            color: #e2e8f0 !important;
+            border: 1px solid #334155 !important;
+            border-radius: .75rem;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+        input[type="number"]::placeholder { color: #94a3b8; }
+        .hidden { display: none !important; }
+        .flex { display: flex; }
+        .justify-between { justify-content: space-between; }
+        .items-center { align-items: center; }
+        .grid { display: grid; }
+        i[data-lucide], .icon-fallback { display: inline-flex; align-items: center; justify-content: center; width: 1.1rem; height: 1.1rem; font-style: normal; }
+        .icon-fallback { font-size: 1rem; line-height: 1; opacity: .95; }
+
+
+        /* Tailwind-like utility subset for self-contained rendering */
+        .max-w-md{max-width:28rem}.mx-auto{margin-left:auto;margin-right:auto}.w-full{width:100%}.w-20{width:5rem}.w-8{width:2rem}.w-4{width:1rem}.w-3{width:.75rem}
+        .h-full{height:100%}.h-12{height:3rem}.h-8{height:2rem}.h-4{height:1rem}.h-3{height:.75rem}.h-2{height:.5rem}
+        .p-10{padding:2.5rem}.p-6{padding:1.5rem}.p-5{padding:1.25rem}.p-4{padding:1rem}.p-3{padding:.75rem}.p-2{padding:.5rem}
+        .px-8{padding-left:2rem;padding-right:2rem}.px-6{padding-left:1.5rem;padding-right:1.5rem}.px-4{padding-left:1rem;padding-right:1rem}.px-2{padding-left:.5rem;padding-right:.5rem}
+        .py-6{padding-top:1.5rem;padding-bottom:1.5rem}.py-5{padding-top:1.25rem;padding-bottom:1.25rem}.py-4{padding-top:1rem;padding-bottom:1rem}.py-2{padding-top:.5rem;padding-bottom:.5rem}.py-0\.5{padding-top:.125rem;padding-bottom:.125rem}
+        .pb-32{padding-bottom:8rem}.pb-12{padding-bottom:3rem}.pb-10{padding-bottom:2.5rem}.pb-8{padding-bottom:2rem}
+        .mb-6{margin-bottom:1.5rem}.mb-4{margin-bottom:1rem}.mb-3{margin-bottom:.75rem}.mb-2{margin-bottom:.5rem}.mb-1{margin-bottom:.25rem}.ml-2{margin-left:.5rem}.mt-1{margin-top:.25rem}
+        .space-y-8 > * + *{margin-top:2rem}.space-y-6 > * + *{margin-top:1.5rem}.space-y-4 > * + *{margin-top:1rem}.space-y-3 > * + *{margin-top:.75rem}.space-y-1\.5 > * + *{margin-top:.375rem}.space-y-1 > * + *{margin-top:.25rem}
+        .text-left{text-align:left}.text-right{text-align:right}.text-center{text-align:center}
+        .text-3xl{font-size:1.875rem;line-height:2.25rem}.text-2xl{font-size:1.5rem;line-height:2rem}.text-xl{font-size:1.25rem;line-height:1.75rem}.text-lg{font-size:1.125rem;line-height:1.75rem}.text-sm{font-size:.875rem;line-height:1.25rem}.text-xs{font-size:.75rem;line-height:1rem}
+        .text-\[10px\]{font-size:10px}.text-\[9px\]{font-size:9px}.text-\[8px\]{font-size:8px}
+        .font-black{font-weight:900}.font-bold{font-weight:700}.italic{font-style:italic}.uppercase{text-transform:uppercase}.leading-none{line-height:1}.tracking-widest{letter-spacing:.16em}.tracking-tighter{letter-spacing:-.03em}
+        .text-white{color:#fff}.text-black{color:#000}.text-slate-500{color:#94a3b8}.text-slate-400{color:#cbd5e1}.text-indigo-500{color:#6366f1}.text-indigo-400{color:#818cf8}.text-indigo-300{color:#a5b4fc}.text-indigo-200{color:#c7d2fe}.text-orange-500{color:#f97316}.text-rose-500{color:#f43f5e}
+        .bg-white{background:#fff}.bg-indigo-600{background:#4f46e5}.bg-slate-900{background:#0f172a}.bg-slate-800{background:#1e293b}.bg-slate-700{background:#334155}.bg-black\/40{background:rgba(0,0,0,.4)}.bg-black\/30{background:rgba(0,0,0,.3)}.bg-black\/20{background:rgba(0,0,0,.2)}.bg-indigo-500\/10{background:rgba(99,102,241,.1)}.bg-rose-500\/10{background:rgba(244,63,94,.1)}.bg-orange-500{background:#f97316}
+        .bg-gradient-to-r{background-image:linear-gradient(to right,var(--tw-gradient-from,#4f46e5),var(--tw-gradient-to,#8b5cf6))}.from-indigo-600{--tw-gradient-from:#4f46e5}.to-violet-500{--tw-gradient-to:#8b5cf6}
+        .border{border:1px solid rgba(255,255,255,.12)}.border-2{border-width:2px}.border-b{border-bottom:1px solid rgba(255,255,255,.08)}.border-t{border-top:1px solid rgba(255,255,255,.08)}.border-l-4{border-left-width:4px}
+        .border-white\/5{border-color:rgba(255,255,255,.08)}.border-white\/20{border-color:rgba(255,255,255,.2)}.border-indigo-400{border-color:#818cf8}.border-indigo-500\/20{border-color:rgba(99,102,241,.2)}.border-rose-500\/20{border-color:rgba(244,63,94,.2)}.border-slate-800{border-color:#1e293b}
+        .rounded-full{border-radius:9999px}.rounded-3xl{border-radius:1.5rem}.rounded-2xl{border-radius:1rem}.rounded-xl{border-radius:.75rem}.rounded-lg{border-radius:.5rem}.rounded-md{border-radius:.375rem}.rounded{border-radius:.25rem}.rounded-bl-lg{border-bottom-left-radius:.5rem}
+        .rounded-\[2rem\]{border-radius:2rem}.rounded-\[2\.5rem\]{border-radius:2.5rem}
+        .shadow-2xl{box-shadow:0 25px 50px -12px rgba(0,0,0,.5)}.opacity-80{opacity:.8}.opacity-30{opacity:.3}.opacity-0{opacity:0}
+        .relative{position:relative}.absolute{position:absolute}.fixed{position:fixed}.sticky{position:sticky}.top-0{top:0}.bottom-0{bottom:0}.bottom-28{bottom:7rem}.left-0{left:0}.left-6{left:1.5rem}.right-0{right:0}.right-6{right:1.5rem}.inset-0{inset:0}
+        .z-50{z-index:50}.z-40{z-index:40}.z-10{z-index:10}.overflow-hidden{overflow:hidden}.outline-none{outline:none}
+        .inline-flex{display:inline-flex}.block{display:block}.flex{display:flex}.flex-col{flex-direction:column}.items-start{align-items:flex-start}.items-end{align-items:flex-end}.items-center{align-items:center}.justify-between{justify-content:space-between}.justify-center{justify-content:center}
+        .gap-4{gap:1rem}.gap-3{gap:.75rem}.gap-2{gap:.5rem}.gap-1\.5{gap:.375rem}.gap-1{gap:.25rem}.grid{display:grid}.grid-cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}.grid-cols-3{grid-template-columns:repeat(3,minmax(0,1fr))}.grid-cols-5{grid-template-columns:repeat(5,minmax(0,1fr))}
+        .transition-all,.transition-colors,.transition-opacity,.transition-transform{transition-duration:.2s}
+
+        .border-indigo-500{border-color:#6366f1}.border-slate-500{border-color:#64748b}.border-emerald-500{border-color:#10b981}
+        .text-indigo-300{color:#a5b4fc}.text-slate-300{color:#cbd5e1}.text-emerald-300{color:#6ee7b7}.text-indigo-400{color:#818cf8}.text-slate-400{color:#94a3b8}.text-emerald-400{color:#34d399}
+</style>
+</head>
+<body class="pb-32">
+
+    <!-- RPG Header -->
+    <header class="bg-[#0f172a]/80 backdrop-blur-xl border-b border-white/5 px-6 py-6 sticky top-0 z-40">
+        <div class="max-w-md mx-auto">
+            <div class="flex justify-between items-start mb-4">
+                <div>
+                    <h1 class="text-white font-black text-2xl tracking-tighter italic uppercase">GZCLP <span class="text-indigo-500">RPG</span> ⚔️</h1>
+                    <div id="user-rank-badge" class="mt-1 inline-flex items-center gap-1.5 bg-indigo-500/10 text-indigo-400 px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-widest border border-indigo-500/20">Rookie Rank</div>
+                </div>
+                <div class="text-right flex flex-col items-end">
+                    <div id="streak-counter" class="hidden flex items-center gap-1 text-orange-500 mb-1">
+                        <i data-lucide="flame" class="w-3 h-3 streak-fire"></i>
+                        <span class="text-[10px] font-black uppercase tracking-widest" id="streak-val">0 Day Streak</span>
+                    </div>
+                    <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Total XP</p>
+                    <p id="total-xp" class="text-2xl font-black text-white italic mono tracking-tighter">0000</p>
+                </div>
+            </div>
+            <div class="space-y-1.5">
+                <div class="flex justify-between text-[10px] font-black uppercase tracking-tighter text-slate-400">
+                    <span id="current-level">Level 1</span>
+                    <span id="next-level-req">500 XP to next</span>
+                </div>
+                <div class="h-2 w-full bg-slate-800/50 rounded-full overflow-hidden border border-white/5">
+                    <div id="xp-bar-fill" class="h-full bg-gradient-to-r from-indigo-600 to-violet-500 progress-glow transition-all duration-1000" style="width: 0%"></div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Floating Timer -->
+    <div id="rest-timer-ui" class="hidden fixed bottom-28 right-6 left-6 z-50 flex justify-center pointer-events-none">
+        <div id="timer-pill" class="bg-indigo-600 text-white px-8 py-4 rounded-full shadow-2xl border border-indigo-400 flex items-center gap-4 pointer-events-auto transition-colors duration-300">
+            <div class="flex flex-col">
+                <span class="text-[9px] font-black uppercase tracking-widest opacity-80">Resting</span>
+                <span id="timer-display" class="text-2xl font-black mono leading-none">00:00</span>
+            </div>
+            <button onclick="stopTimer()" class="bg-black/20 p-2 rounded-full hover:bg-black/40 transition-colors">
+                <i data-lucide="x" class="w-4 h-4"></i>
+            </button>
+        </div>
+    </div>
+
+    <main id="app-content" class="max-w-md mx-auto p-6 space-y-8"></main>
+
+    <nav class="fixed bottom-0 left-0 right-0 bg-[#0f172a]/90 backdrop-blur-lg border-t border-white/5 px-8 py-5 flex justify-between items-center max-w-md mx-auto z-40">
+        <button onclick="renderSummary()" class="nav-btn flex flex-col items-center gap-1 text-indigo-400" id="nav-summary"><i data-lucide="layout-grid"></i><span class="text-[10px] font-black uppercase">Hero</span></button>
+        <button onclick="renderHistory()" class="nav-btn flex flex-col items-center gap-1 text-slate-500" id="nav-history"><i data-lucide="scroll"></i><span class="text-[10px] font-black uppercase">Log</span></button>
+        <button onclick="renderSettings()" class="nav-btn flex flex-col items-center gap-1 text-slate-500" id="nav-settings"><i data-lucide="swords"></i><span class="text-[10px] font-black uppercase">Armory</span></button>
+    </nav>
+
+    <script>
+        const DEFAULT_CONFIG = {
+            lifts: {
+                'Squat': { t1Inc: 5, t2Inc: 5, t1Start: 60, t2Start: 45 },
+                'Bench Press': { t1Inc: 2.5, t2Inc: 2.5, t1Start: 50, t2Start: 40 },
+                'Overhead Press': { t1Inc: 2.5, t2Inc: 2.5, t1Start: 30, t2Start: 25 },
+                'Deadlift': { t1Inc: 5, t2Inc: 5, t1Start: 90, t2Start: 70 }
+            },
+            accessories: {
+                'Lat Pulldown': { weight: 55, inc: 2.5 },
+                'Dumbbell Row': { weight: 24, inc: 2 }
+            },
+            program: [
+                { dayNum: 1, dayLabel: 'Day 1', t1: 'Squat', t2: 'Bench Press', t3: 'Lat Pulldown' },
+                { dayNum: 2, dayLabel: 'Day 2', t1: 'Overhead Press', t2: 'Deadlift', t3: 'Dumbbell Row' },
+                { dayNum: 3, dayLabel: 'Day 3', t1: 'Bench Press', t2: 'Squat', t3: 'Lat Pulldown' },
+                { dayNum: 4, dayLabel: 'Day 4', t1: 'Deadlift', t2: 'Overhead Press', t3: 'Dumbbell Row' }
+            ],
+            schemes: {
+                T1: [{sets: 5, reps: 3, target: 15}, {sets: 6, reps: 2, target: 12}, {sets: 10, reps: 1, target: 10}],
+                T2: [{sets: 3, reps: 10, target: 30}, {sets: 3, reps: 8, target: 24}, {sets: 3, reps: 6, target: 18}],
+                T3: {sets: 3, reps: 15, amrapTarget: 25}
+            }
+        };
+
+        function storageAvailable() {
+            try {
+                const key = '__gzclp_test__';
+                localStorage.setItem(key, '1');
+                localStorage.removeItem(key);
+                return true;
+            } catch {
+                return false;
+            }
+        }
+
+        const canPersist = storageAvailable();
+
+        function loadJSON(key, fallback) {
+            if (!canPersist) return fallback;
+            try {
+                const raw = localStorage.getItem(key);
+                return raw ? JSON.parse(raw) : fallback;
+            } catch {
+                return fallback;
+            }
+        }
+
+        let userConfig = loadJSON('gzclp_config', JSON.parse(JSON.stringify(DEFAULT_CONFIG)));
+        let sessions = loadJSON('gzclp_sessions', []);
+        let activeSession = null;
+        let timerInterval = null;
+
+        // --- MATH UTILS ---
+        function calculateE1RM(weight, reps) {
+            if (reps === 0) return 0;
+            if (reps === 1) return weight;
+            return Math.round(weight / (1.0278 - (0.0278 * reps)));
+        }
+
+        function sanitizeRepValue(rawValue) {
+            const parsed = Number.parseInt(rawValue, 10);
+            if (Number.isNaN(parsed) || parsed < 0) return 0;
+            return parsed;
+        }
+
+        function safeCreateIcons() {
+            if (window.lucide && typeof window.lucide.createIcons === 'function') {
+                window.lucide.createIcons();
+                return;
+            }
+            const fallback = {
+                flame: '🔥',
+                x: '✕',
+                'layout-grid': '◼︎',
+                scroll: '📜',
+                swords: '⚔️',
+                sword: '🗡️',
+                shield: '🛡️'
+            };
+            document.querySelectorAll('i[data-lucide]').forEach((el) => {
+                const key = el.getAttribute('data-lucide');
+                const symbol = fallback[key] || '•';
+                el.textContent = symbol;
+                el.classList.add('icon-fallback');
+            });
+        }
+
+        function saveConfig() {
+            if (!canPersist) return;
+            localStorage.setItem('gzclp_config', JSON.stringify(userConfig));
+        }
+
+        function clearAppData() {
+            if (!canPersist) {
+                alert('Local storage is unavailable in this browser context.');
+                return;
+            }
+            Object.keys(localStorage)
+                .filter(key => key.startsWith('gzclp_'))
+                .forEach(key => localStorage.removeItem(key));
+            location.reload();
+        }
+
+        function exportBackup() {
+            const payload = {
+                app: 'gzclp-tracker',
+                version: 1,
+                exportedAt: new Date().toISOString(),
+                config: userConfig,
+                sessions
+            };
+            const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `gzclp-backup-${new Date().toISOString().slice(0, 10)}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function triggerImport() {
+            const input = document.getElementById('backup-import-input');
+            if (input) input.click();
+        }
+
+        function importBackup(event) {
+            const file = event.target.files?.[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = () => {
+                try {
+                    const parsed = JSON.parse(reader.result);
+                    if (!parsed || !Array.isArray(parsed.sessions) || !parsed.config) {
+                        throw new Error('Invalid backup file format.');
+                    }
+                    sessions = parsed.sessions;
+                    userConfig = parsed.config;
+                    if (canPersist) localStorage.setItem('gzclp_sessions', JSON.stringify(sessions));
+                    saveConfig();
+                    activeSession = null;
+                    stopTimer();
+                    renderSummary();
+                    alert(`Backup imported: ${sessions.length} sessions loaded.`);
+                } catch (err) {
+                    alert(`Import failed: ${err.message}`);
+                } finally {
+                    event.target.value = '';
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        // --- XP & STREAK LOGIC ---
+        function getStreakInfo() {
+            if (sessions.length === 0) return 0;
+
+            const msPerDay = 1000 * 60 * 60 * 24;
+            const uniqueDayStarts = [...new Set(
+                sessions
+                    .map(s => {
+                        const d = new Date(s.timestamp);
+                        return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+                    })
+            )].sort((a, b) => b - a);
+
+            let streak = 0;
+            let lastDayStart = new Date();
+            lastDayStart = new Date(lastDayStart.getFullYear(), lastDayStart.getMonth(), lastDayStart.getDate()).getTime();
+
+            for (const dayStart of uniqueDayStarts) {
+                const diffDays = (lastDayStart - dayStart) / msPerDay;
+                if (diffDays <= 3.5) { // Allows every-other-day training cadence with a small buffer
+                    streak++;
+                    lastDayStart = dayStart;
+                } else {
+                    break;
+                }
+            }
+
+            return streak;
+        }
+
+        // --- DATA & LIFT STATS ---
+        function getLiftStats() {
+            const stats = {};
+            Object.keys(userConfig.lifts).forEach(lift => {
+                const liftSessions = sessions.filter(s => s.t1Lift === lift);
+                const lastT1 = [...liftSessions].reverse().find(s => s.t1Lift === lift);
+                const lastT2 = [...sessions].reverse().find(s => s.t2Lift === lift);
+                const bestE1RM = liftSessions.length > 0 ? Math.max(...liftSessions.map(s => s.t1e1rm || 0)) : 0;
+                
+                stats[lift] = {
+                    t1Weight: lastT1 ? (lastT1.t1Success ? lastT1.t1Weight + userConfig.lifts[lift].t1Inc : lastT1.t1Weight) : userConfig.lifts[lift].t1Start,
+                    t1Stage: lastT1 ? (lastT1.t1Success ? lastT1.t1Stage : (lastT1.t1Stage < 3 ? lastT1.t1Stage + 1 : 1)) : 1,
+                    t2Weight: lastT2 ? (lastT2.t2Success ? lastT2.t2Weight + userConfig.lifts[lift].t2Inc : lastT2.t2Weight) : userConfig.lifts[lift].t2Start,
+                    t2Stage: lastT2 ? (lastT2.t2Success ? lastT2.t2Stage : (lastT2.t2Stage < 3 ? lastT2.t2Stage + 1 : 1)) : 1,
+                    bestE1RM
+                };
+            });
+            
+            const accStats = {};
+            Object.keys(userConfig.accessories).forEach(acc => {
+                const lastT3 = [...sessions].reverse().find(s => s.t3Lift === acc);
+                accStats[acc] = lastT3 ? (lastT3.t3Success ? lastT3.t3Weight + userConfig.accessories[acc].inc : lastT3.t3Weight) : userConfig.accessories[acc].weight;
+            });
+
+            return { lifts: stats, accessories: accStats };
+        }
+
+        function getNextDay() {
+            if (sessions.length === 0) return userConfig.program[0];
+            const lastDayNum = sessions[sessions.length - 1].dayNum || 1;
+            const nextIdx = lastDayNum % 4;
+            return userConfig.program[nextIdx];
+        }
+
+        // --- RENDERERS ---
+        function renderSummary() {
+            updateRPGHeader();
+            setActiveNav('nav-summary');
+            const stats = getLiftStats();
+            document.getElementById('app-content').innerHTML = `
+                <div class="space-y-6">
+                    <button onclick="startWorkout()" class="w-full bg-indigo-600 p-6 rounded-[2.5rem] border-t border-white/20 shadow-2xl active:scale-[0.98] transition-all relative overflow-hidden group">
+                        <div class="absolute inset-0 bg-white/5 opacity-0 group-active:opacity-100 transition-opacity"></div>
+                        <div class="flex justify-between items-center relative z-10">
+                            <div class="text-left">
+                                <span class="text-[10px] font-black text-indigo-200 uppercase tracking-widest">Next Quest</span>
+                                <h3 class="text-white text-2xl font-black italic tracking-tighter uppercase">Enter Dungeon</h3>
+                                <p class="text-[10px] text-indigo-300 font-bold uppercase mt-1">${getNextDay().dayLabel} - ${getNextDay().t1}</p>
+                            </div>
+                            <i data-lucide="sword" class="text-white w-8 h-8 opacity-30 transform group-hover:rotate-12 transition-transform"></i>
+                        </div>
+                    </button>
+                    
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="glass-card p-5 rounded-3xl">
+                             <span class="text-[9px] font-black text-slate-500 uppercase tracking-widest block mb-2">Power Score</span>
+                             <div class="text-xl font-black italic text-white mono">${Object.values(stats.lifts).reduce((a,b)=>a+b.bestE1RM, 0)}</div>
+                        </div>
+                        <div class="glass-card p-5 rounded-3xl">
+                             <span class="text-[9px] font-black text-slate-500 uppercase tracking-widest block mb-2">Rank</span>
+                             <div class="text-xl font-black italic text-indigo-400 uppercase">${getXPStats().rank}</div>
+                        </div>
+                    </div>
+
+                    <div class="glass-card p-6 rounded-[2rem]">
+                        <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center justify-between">
+                            <span>Current Arsenal</span>
+                            <i data-lucide="shield" class="w-3 h-3 opacity-30"></i>
+                        </h4>
+                        <div class="space-y-4">
+                            ${Object.entries(stats.lifts).map(([name, data]) => `
+                                <div class="flex justify-between items-center">
+                                    <div class="flex flex-col">
+                                        <span class="text-xs font-bold text-white uppercase italic">${name}</span>
+                                        <span class="text-[8px] text-slate-500 uppercase font-black">Best E1RM: ${data.bestE1RM}kg</span>
+                                    </div>
+                                    <span class="mono text-indigo-400 font-black">${data.t1Weight}kg</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                </div>
+            `;
+            safeCreateIcons();
+        }
+
+        function startWorkout() {
+            const stats = getLiftStats();
+            const day = getNextDay();
+            const t1Data = stats.lifts[day.t1];
+            const t2Data = stats.lifts[day.t2];
+            const t1Cfg = userConfig.schemes.T1[t1Data.t1Stage - 1];
+            const t2Cfg = userConfig.schemes.T2[t2Data.t2Stage - 1];
+
+            activeSession = {
+                dayNum: day.dayNum,
+                dayLabel: day.dayLabel,
+                date: new Date().toLocaleDateString(),
+                t1: { lift: day.t1, weight: t1Data.t1Weight, stage: t1Data.t1Stage, reps: Array(t1Cfg.sets).fill(t1Cfg.reps) },
+                t2: { lift: day.t2, weight: t2Data.t2Weight, stage: t2Data.t2Stage, reps: Array(t2Cfg.sets).fill(t2Cfg.reps) },
+                t3: { lift: day.t3, weight: stats.accessories[day.t3], reps: [15, 15, 15] }
+            };
+            renderTracker();
+        }
+
+        function renderTracker() {
+            document.getElementById('app-content').innerHTML = `
+                <div class="space-y-8 pb-12" style="padding-bottom: calc(12rem + env(safe-area-inset-bottom));">
+                    <div class="flex justify-between items-center">
+                        <span class="text-[10px] font-black text-indigo-400 uppercase tracking-widest italic">${activeSession.dayLabel} Quest</span>
+                        <div class="flex gap-2">
+                            <button onclick="startTimer(90)" class="bg-slate-800 text-[9px] font-black px-4 py-2 rounded-xl">90S REST</button>
+                            <button onclick="startTimer(180)" class="bg-indigo-600 text-[9px] font-black px-4 py-2 rounded-xl">3M REST</button>
+                        </div>
+                    </div>
+
+                    ${renderSection('t1', 'Tier 1 • Main Lift', 'indigo', activeSession.t1)}
+                    ${renderSection('t2', 'Tier 2 • Volume', 'slate', activeSession.t2)}
+                    ${renderSection('t3', 'Tier 3 • Accessory', 'emerald', activeSession.t3)}
+
+                    <button onclick="saveWorkout()" class="w-full bg-white text-black p-6 rounded-[2.5rem] font-black text-lg italic uppercase shadow-2xl active:scale-95 transition-all">Submit Quest Result</button>
+                </div>
+            `;
+            safeCreateIcons();
+        }
+
+        function renderSection(tierKey, label, color, data) {
+            return `
+            <section class="glass-card p-6 rounded-[2.5rem] border-l-4 border-${color}-500">
+                <div class="mb-6">
+                    <span class="text-[9px] font-black text-${color}-400 uppercase tracking-widest">${label}</span>
+                    <h2 class="text-3xl font-black text-white italic uppercase tracking-tighter">${data.lift}</h2>
+                    <p class="mono text-${color}-300 text-sm font-bold">${data.weight}kg ${data.stage ? '• Stage ' + data.stage : ''}</p>
+                </div>
+                <div class="grid ${data.reps.length > 5 ? 'grid-cols-5' : 'grid-cols-3'} gap-3">
+                    ${data.reps.map((r, i) => {
+                        const isAmrap = i === data.reps.length - 1;
+                        return `
+                        <div class="flex flex-col items-center gap-1">
+                            <span class="text-[8px] font-black uppercase text-slate-500">${isAmrap ? 'AMRAP' : 'SET ' + (i+1)}</span>
+                            <input type="number" min="0" value="${r}" onchange="activeSession.${tierKey}.reps[${i}] = sanitizeRepValue(this.value); this.value = activeSession.${tierKey}.reps[${i}]" 
+                                   class="w-full h-12 bg-black/40 border-2 ${isAmrap ? 'amrap-input' : 'border-slate-800'} rounded-xl text-center text-xl font-black italic text-white outline-none">
+                        </div>`;
+                    }).join('')}
+                </div>
+            </section>`;
+        }
+
+        function saveWorkout() {
+            const stats = getLiftStats();
+            const t1Cfg = userConfig.schemes.T1[activeSession.t1.stage - 1];
+            const amrapReps = activeSession.t1.reps[activeSession.t1.reps.length - 1];
+            
+            const t1Success = activeSession.t1.reps.every(r => r >= t1Cfg.reps) && 
+                              activeSession.t1.reps.reduce((a,b)=>a+b,0) >= t1Cfg.target;
+            
+            const t2Cfg = userConfig.schemes.T2[activeSession.t2.stage - 1];
+            const t2Success = activeSession.t2.reps.every(r => r >= t2Cfg.reps);
+
+            const t3Success = activeSession.t3.reps[2] >= userConfig.schemes.T3.amrapTarget;
+
+            // PR Detection
+            const currentE1RM = calculateE1RM(activeSession.t1.weight, amrapReps);
+            const isPR = currentE1RM > stats.lifts[activeSession.t1.lift].bestE1RM;
+            
+            // Streak XP Bonus
+            const streak = getStreakInfo() + 1; // +1 for the current session
+            const streakMultiplier = 1 + (Math.min(streak, 10) * 0.05); // Up to 50% bonus
+
+            let sessionXP = 150;
+            if (t1Success) sessionXP += 50;
+            if (isPR) sessionXP += 100;
+            if (t3Success) sessionXP += 25;
+            
+            const finalXP = Math.round(sessionXP * streakMultiplier);
+
+            const sessionData = {
+                ...activeSession,
+                t1Lift: activeSession.t1.lift,
+                t1Weight: activeSession.t1.weight,
+                t1Stage: activeSession.t1.stage,
+                t1Success,
+                t1e1rm: currentE1RM,
+                isPR,
+                t2Lift: activeSession.t2.lift,
+                t2Weight: activeSession.t2.weight,
+                t2Stage: activeSession.t2.stage,
+                t2Success,
+                t3Lift: activeSession.t3.lift,
+                t3Weight: activeSession.t3.weight,
+                t3Success,
+                xp: finalXP,
+                timestamp: Date.now()
+            };
+
+            sessions.push(sessionData);
+            if (canPersist) localStorage.setItem('gzclp_sessions', JSON.stringify(sessions));
+            activeSession = null;
+            stopTimer();
+            renderSummary();
+        }
+
+        function getXPStats() {
+            const total = sessions.reduce((acc, s) => acc + (s.xp || 0), 0);
+            const level = Math.floor(total / 500) + 1;
+            const progress = ((total % 500) / 500) * 100;
+            const rank = level < 3 ? "Rookie" : level < 8 ? "Warrior" : level < 15 ? "Knight" : "Warlord";
+            return { total, level, progress, rank, remaining: 500 - (total % 500) };
+        }
+
+        function updateRPGHeader() {
+            const xp = getXPStats();
+            const streak = getStreakInfo();
+            
+            document.getElementById('total-xp').innerText = xp.total.toString().padStart(4, '0');
+            document.getElementById('user-rank-badge').innerText = `${xp.rank} Rank`;
+            document.getElementById('current-level').innerText = `Level ${xp.level}`;
+            document.getElementById('next-level-req').innerText = `${xp.remaining} XP to next`;
+            document.getElementById('xp-bar-fill').style.width = `${xp.progress}%`;
+
+            const streakEl = document.getElementById('streak-counter');
+            if (streak > 1) {
+                streakEl.classList.remove('hidden');
+                document.getElementById('streak-val').innerText = `${streak} Day Streak`;
+            } else {
+                streakEl.classList.add('hidden');
+            }
+        }
+
+        function setActiveNav(id) { 
+            document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.replace('text-indigo-400', 'text-slate-500'));
+            document.getElementById(id).classList.replace('text-slate-500', 'text-indigo-400');
+        }
+
+        function renderHistory() {
+            setActiveNav('nav-history');
+            let html = `<div class="space-y-4 pb-10"><h2 class="text-2xl font-black text-white italic tracking-tighter uppercase">Quest Log</h2>`;
+            if (sessions.length === 0) html += `<p class="text-slate-500 p-10 text-center font-bold italic uppercase tracking-widest text-[10px]">Empty Chronicles...</p>`;
+            else {
+                [...sessions].reverse().forEach(s => {
+                    html += `
+                        <div class="glass-card p-5 rounded-3xl border border-white/5 relative overflow-hidden">
+                            ${s.isPR ? '<div class="absolute top-0 right-0 bg-orange-500 text-[8px] font-black px-2 py-0.5 rounded-bl-lg">NEW PR</div>' : ''}
+                            <div class="flex justify-between items-center mb-3">
+                                <span class="text-[9px] font-black text-indigo-400 uppercase tracking-widest">${s.date}</span>
+                                <div class="bg-indigo-500/10 text-indigo-400 px-2 py-0.5 rounded text-[10px] font-black">+${s.xp} XP</div>
+                            </div>
+                            <div class="space-y-1">
+                                <p class="text-white font-black italic uppercase text-sm">${s.t1Lift} <span class="${s.t1Success ? 'text-indigo-400' : 'text-rose-500'} ml-2">${s.t1Weight}kg</span></p>
+                                <p class="text-[9px] font-bold text-slate-500 uppercase">T2: ${s.t2Lift} (${s.t2Success ? 'Pass' : 'Fail'}) • T3: ${s.t3Lift} (${s.t3Success ? 'Gain' : 'Stay'})</p>
+                            </div>
+                        </div>`;
+                });
+            }
+            document.getElementById('app-content').innerHTML = html + `</div>`;
+        }
+
+        function renderSettings() {
+            setActiveNav('nav-settings');
+            document.getElementById('app-content').innerHTML = `
+                <div class="space-y-6 pb-8">
+                    <h2 class="text-2xl font-black text-white italic tracking-tighter uppercase">The Armory</h2>
+                    <div class="glass-card p-6 rounded-[2rem] space-y-4">
+                        <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Base Weight Calibration</p>
+                        ${Object.entries(userConfig.lifts).map(([name, lift]) => `
+                            <div class="p-4 bg-black/30 rounded-2xl border border-white/5 flex justify-between items-center">
+                                <h4 class="text-xs font-black text-white italic uppercase">${name}</h4>
+                                <input type="number" value="${lift.t1Start}" onchange="userConfig.lifts['${name}'].t1Start=parseFloat(this.value); saveConfig()"
+                                       class="w-20 bg-slate-900 border border-white/5 rounded-lg p-2 text-white font-bold text-xs">
+                            </div>
+                        `).join('')}
+                    </div>
+
+                    <div class="glass-card p-6 rounded-[2rem] space-y-3">
+                        <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Backups</p>
+                        <div class="grid grid-cols-2 gap-3">
+                            <button onclick="exportBackup()" class="bg-indigo-600 text-white p-3 rounded-xl font-black text-[10px] uppercase">Export JSON</button>
+                            <button onclick="triggerImport()" class="bg-slate-700 text-white p-3 rounded-xl font-black text-[10px] uppercase">Import JSON</button>
+                        </div>
+                        <input id="backup-import-input" type="file" accept="application/json" class="hidden" onchange="importBackup(event)">
+                        <p class="text-[9px] text-slate-500 font-bold uppercase tracking-widest">Self-contained mode active. Export weekly for backups.</p>
+                    </div>
+
+                    <button onclick="clearAppData();" class="w-full bg-rose-500/10 text-rose-500 p-4 rounded-2xl font-black text-[10px] uppercase border border-rose-500/20">Purge Character Progress</button>
+                </div>`;
+            safeCreateIcons();
+        }
+
+        function registerServiceWorker() {
+            // Self-contained build: no service worker registration required.
+        }
+
+        // --- TIMER INIT ---
+        function initTimer() {
+            const end = canPersist ? localStorage.getItem('gzclp_timer_end') : null;
+            if (end && parseInt(end) > Date.now()) startTimerAt(parseInt(end));
+        }
+        function startTimer(seconds) {
+            const end = Date.now() + (seconds * 1000);
+            if (canPersist) localStorage.setItem('gzclp_timer_end', end);
+            startTimerAt(end);
+        }
+        function startTimerAt(endTimestamp) {
+            clearInterval(timerInterval);
+            document.getElementById('rest-timer-ui').classList.remove('hidden');
+            document.getElementById('timer-pill').classList.remove('timer-complete');
+            const update = () => {
+                const now = Date.now();
+                const remaining = Math.max(0, Math.ceil((endTimestamp - now) / 1000));
+                document.getElementById('timer-display').innerText = `${Math.floor(remaining/60)}:${(remaining%60).toString().padStart(2, '0')}`;
+                if (remaining <= 0) {
+                    document.getElementById('timer-display').innerText = "READY";
+                    document.getElementById('timer-pill').classList.add('timer-complete');
+                    clearInterval(timerInterval);
+                    if ("vibrate" in navigator) navigator.vibrate([500, 200, 500]);
+                }
+            };
+            update();
+            timerInterval = setInterval(update, 1000);
+        }
+        function stopTimer() { clearInterval(timerInterval); if (canPersist) localStorage.removeItem('gzclp_timer_end'); document.getElementById('rest-timer-ui').classList.add('hidden'); }
+
+        registerServiceWorker();
+        initTimer();
+        renderSummary();
+        if (!canPersist) alert('Storage is unavailable in this browser context. Progress cannot be saved.');
+    </script>
+</body>
+</html>

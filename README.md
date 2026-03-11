@@ -2,11 +2,26 @@
 
 A phone-first GZCLP workout tracker.
 
+## Self-contained build (recommended for your phone)
+
+Use `gzclp.selfcontained.html` when you want a single file with **no CDN dependencies**.
+
+- No Tailwind CDN required
+- No Lucide CDN required
+- No Google Fonts fetches
+- Designed specifically for direct `file://` opening on iOS/Edge
+
+### Steps
+1. Copy `gzclp.selfcontained.html` to your phone.
+2. Open it from Files in your browser.
+3. Use Armory → Export JSON for backups.
+
 ## Single-file mode (primary workflow)
 
 If you want the simplest setup, only use:
 
 - `gzclp.html`
+- `gzclp.selfcontained.html`
 
 ### Steps
 
@@ -37,6 +52,7 @@ If you want the simplest setup, only use:
 If you host files over `http/https`, include:
 
 - `gzclp.html`
+- `gzclp.selfcontained.html`
 - `manifest.webmanifest`
 - `service-worker.js`
 
