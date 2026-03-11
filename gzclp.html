@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>GZCLP RPG Tracker</title>
+    <link rel="manifest" href="manifest.webmanifest">
+    <meta name="theme-color" content="#0f172a">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
@@ -116,6 +118,67 @@
             const parsed = Number.parseInt(rawValue, 10);
             if (Number.isNaN(parsed) || parsed < 0) return 0;
             return parsed;
+        }
+
+        function saveConfig() {
+            localStorage.setItem('gzclp_config', JSON.stringify(userConfig));
+        }
+
+        function clearAppData() {
+            Object.keys(localStorage)
+                .filter(key => key.startsWith('gzclp_'))
+                .forEach(key => localStorage.removeItem(key));
+            location.reload();
+        }
+
+        function exportBackup() {
+            const payload = {
+                app: 'gzclp-tracker',
+                version: 1,
+                exportedAt: new Date().toISOString(),
+                config: userConfig,
+                sessions
+            };
+            const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `gzclp-backup-${new Date().toISOString().slice(0, 10)}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function triggerImport() {
+            const input = document.getElementById('backup-import-input');
+            if (input) input.click();
+        }
+
+        function importBackup(event) {
+            const file = event.target.files?.[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = () => {
+                try {
+                    const parsed = JSON.parse(reader.result);
+                    if (!parsed || !Array.isArray(parsed.sessions) || !parsed.config) {
+                        throw new Error('Invalid backup file format.');
+                    }
+                    sessions = parsed.sessions;
+                    userConfig = parsed.config;
+                    localStorage.setItem('gzclp_sessions', JSON.stringify(sessions));
+                    saveConfig();
+                    activeSession = null;
+                    stopTimer();
+                    renderSummary();
+                    alert(`Backup imported: ${sessions.length} sessions loaded.`);
+                } catch (err) {
+                    alert(`Import failed: ${err.message}`);
+                } finally {
+                    event.target.value = '';
+                }
+            };
+            reader.readAsText(file);
         }
 
         // --- XP & STREAK LOGIC ---
@@ -408,21 +471,40 @@
         function renderSettings() {
             setActiveNav('nav-settings');
             document.getElementById('app-content').innerHTML = `
-                <div class="space-y-6">
+                <div class="space-y-6 pb-8">
                     <h2 class="text-2xl font-black text-white italic tracking-tighter uppercase">The Armory</h2>
                     <div class="glass-card p-6 rounded-[2rem] space-y-4">
                         <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Base Weight Calibration</p>
                         ${Object.entries(userConfig.lifts).map(([name, lift]) => `
                             <div class="p-4 bg-black/30 rounded-2xl border border-white/5 flex justify-between items-center">
                                 <h4 class="text-xs font-black text-white italic uppercase">${name}</h4>
-                                <input type="number" value="${lift.t1Start}" onchange="userConfig.lifts['${name}'].t1Start=parseFloat(this.value); localStorage.setItem('gzclp_config', JSON.stringify(userConfig))"
+                                <input type="number" value="${lift.t1Start}" onchange="userConfig.lifts['${name}'].t1Start=parseFloat(this.value); saveConfig()"
                                        class="w-20 bg-slate-900 border border-white/5 rounded-lg p-2 text-white font-bold text-xs">
                             </div>
                         `).join('')}
                     </div>
-                    <button onclick="localStorage.clear(); location.reload();" class="w-full bg-rose-500/10 text-rose-500 p-4 rounded-2xl font-black text-[10px] uppercase border border-rose-500/20">Purge Character Progress</button>
+
+                    <div class="glass-card p-6 rounded-[2rem] space-y-3">
+                        <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Backups</p>
+                        <div class="grid grid-cols-2 gap-3">
+                            <button onclick="exportBackup()" class="bg-indigo-600 text-white p-3 rounded-xl font-black text-[10px] uppercase">Export JSON</button>
+                            <button onclick="triggerImport()" class="bg-slate-700 text-white p-3 rounded-xl font-black text-[10px] uppercase">Import JSON</button>
+                        </div>
+                        <input id="backup-import-input" type="file" accept="application/json" class="hidden" onchange="importBackup(event)">
+                        <p class="text-[9px] text-slate-500 font-bold uppercase tracking-widest">Tip: export weekly or after big PRs.</p>
+                    </div>
+
+                    <button onclick="clearAppData();" class="w-full bg-rose-500/10 text-rose-500 p-4 rounded-2xl font-black text-[10px] uppercase border border-rose-500/20">Purge Character Progress</button>
                 </div>`;
             lucide.createIcons();
+        }
+
+        function registerServiceWorker() {
+            if ('serviceWorker' in navigator) {
+                window.addEventListener('load', () => {
+                    navigator.serviceWorker.register('./service-worker.js').catch(() => {});
+                });
+            }
         }
 
         // --- TIMER INIT ---
@@ -455,6 +537,7 @@
         }
         function stopTimer() { clearInterval(timerInterval); localStorage.removeItem('gzclp_timer_end'); document.getElementById('rest-timer-ui').classList.add('hidden'); }
 
+        registerServiceWorker();
         initTimer();
         renderSummary();
     </script>
