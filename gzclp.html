@@ -112,6 +112,12 @@
             return Math.round(weight / (1.0278 - (0.0278 * reps)));
         }
 
+        function sanitizeRepValue(rawValue) {
+            const parsed = Number.parseInt(rawValue, 10);
+            if (Number.isNaN(parsed) || parsed < 0) return 0;
+            return parsed;
+        }
+
         // --- XP & STREAK LOGIC ---
         function getStreakInfo() {
             if (sessions.length === 0) return 0;
@@ -272,7 +278,7 @@
                         return `
                         <div class="flex flex-col items-center gap-1">
                             <span class="text-[8px] font-black uppercase text-slate-500">${isAmrap ? 'AMRAP' : 'SET ' + (i+1)}</span>
-                            <input type="number" value="${r}" onchange="activeSession.${tierKey}.reps[${i}]=parseInt(this.value)" 
+                            <input type="number" min="0" value="${r}" onchange="activeSession.${tierKey}.reps[${i}] = sanitizeRepValue(this.value); this.value = activeSession.${tierKey}.reps[${i}]" 
                                    class="w-full h-12 bg-black/40 border-2 ${isAmrap ? 'amrap-input' : 'border-slate-800'} rounded-xl text-center text-xl font-black italic text-white outline-none">
                         </div>`;
                     }).join('')}
@@ -339,7 +345,8 @@
             const level = Math.floor(total / 500) + 1;
             const progress = ((total % 500) / 500) * 100;
             const rank = level < 3 ? "Rookie" : level < 8 ? "Warrior" : level < 15 ? "Knight" : "Warlord";
-            return { total, level, progress, rank, remaining: 500 - (total % 500) };
+            const remainder = total % 500;
+            return { total, level, progress, rank, remaining: remainder === 0 ? 0 : 500 - remainder };
         }
 
         function updateRPGHeader() {
