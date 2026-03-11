@@ -4,6 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>GZCLP RPG Tracker</title>
+    <link rel="manifest" href="manifest.webmanifest">
+    <meta name="theme-color" content="#0f172a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="GZCLP">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
@@ -21,7 +26,23 @@
         .timer-complete { animation: pulse-red 2s infinite; background-color: #e11d48 !important; }
         .amrap-input { border-color: var(--amrap) !important; color: var(--amrap) !important; box-shadow: 0 0 10px rgba(245, 158, 11, 0.2); }
         .streak-fire { filter: drop-shadow(0 0 8px #f59e0b); }
-    </style>
+    
+
+        /* Single-file fallback layout when Tailwind CDN is unavailable */
+        header, main, nav { max-width: 480px; margin: 0 auto; }
+        header { position: sticky; top: 0; background: rgba(15, 23, 42, 0.9); border-bottom: 1px solid rgba(255,255,255,.08); padding: 1rem; z-index: 30; }
+        #app-content { padding: 1rem; }
+        nav { position: fixed; left: 0; right: 0; bottom: 0; display: grid; grid-template-columns: repeat(3,1fr); gap: .5rem; padding: .75rem 1rem; background: rgba(15, 23, 42, 0.95); border-top: 1px solid rgba(255,255,255,.08); z-index: 40; }
+        nav button { display: flex; flex-direction: column; align-items: center; gap: .2rem; background: transparent; border: 0; color: #94a3b8; font-weight: 700; font-size: .7rem; }
+        section, .glass-card { border-radius: 1rem; padding: 1rem; }
+        button { cursor: pointer; }
+        input[type="number"] { color: #fff; }
+        .hidden { display: none !important; }
+        .flex { display: flex; }
+        .justify-between { justify-content: space-between; }
+        .items-center { align-items: center; }
+        .grid { display: grid; }
+</style>
 </head>
 <body class="pb-32">
 
@@ -100,8 +121,31 @@
             }
         };
 
-        let userConfig = JSON.parse(localStorage.getItem('gzclp_config')) || JSON.parse(JSON.stringify(DEFAULT_CONFIG));
-        let sessions = JSON.parse(localStorage.getItem('gzclp_sessions')) || [];
+        function storageAvailable() {
+            try {
+                const key = '__gzclp_test__';
+                localStorage.setItem(key, '1');
+                localStorage.removeItem(key);
+                return true;
+            } catch {
+                return false;
+            }
+        }
+
+        const canPersist = storageAvailable();
+
+        function loadJSON(key, fallback) {
+            if (!canPersist) return fallback;
+            try {
+                const raw = localStorage.getItem(key);
+                return raw ? JSON.parse(raw) : fallback;
+            } catch {
+                return fallback;
+            }
+        }
+
+        let userConfig = loadJSON('gzclp_config', JSON.parse(JSON.stringify(DEFAULT_CONFIG)));
+        let sessions = loadJSON('gzclp_sessions', []);
         let activeSession = null;
         let timerInterval = null;
 
@@ -112,23 +156,111 @@
             return Math.round(weight / (1.0278 - (0.0278 * reps)));
         }
 
+        function sanitizeRepValue(rawValue) {
+            const parsed = Number.parseInt(rawValue, 10);
+            if (Number.isNaN(parsed) || parsed < 0) return 0;
+            return parsed;
+        }
+
+        function safeCreateIcons() {
+            if (window.lucide && typeof window.lucide.createIcons === 'function') {
+                window.lucide.createIcons();
+            }
+        }
+
+        function saveConfig() {
+            if (!canPersist) return;
+            localStorage.setItem('gzclp_config', JSON.stringify(userConfig));
+        }
+
+        function clearAppData() {
+            if (!canPersist) {
+                alert('Local storage is unavailable in this browser context.');
+                return;
+            }
+            Object.keys(localStorage)
+                .filter(key => key.startsWith('gzclp_'))
+                .forEach(key => localStorage.removeItem(key));
+            location.reload();
+        }
+
+        function exportBackup() {
+            const payload = {
+                app: 'gzclp-tracker',
+                version: 1,
+                exportedAt: new Date().toISOString(),
+                config: userConfig,
+                sessions
+            };
+            const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `gzclp-backup-${new Date().toISOString().slice(0, 10)}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function triggerImport() {
+            const input = document.getElementById('backup-import-input');
+            if (input) input.click();
+        }
+
+        function importBackup(event) {
+            const file = event.target.files?.[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = () => {
+                try {
+                    const parsed = JSON.parse(reader.result);
+                    if (!parsed || !Array.isArray(parsed.sessions) || !parsed.config) {
+                        throw new Error('Invalid backup file format.');
+                    }
+                    sessions = parsed.sessions;
+                    userConfig = parsed.config;
+                    if (canPersist) localStorage.setItem('gzclp_sessions', JSON.stringify(sessions));
+                    saveConfig();
+                    activeSession = null;
+                    stopTimer();
+                    renderSummary();
+                    alert(`Backup imported: ${sessions.length} sessions loaded.`);
+                } catch (err) {
+                    alert(`Import failed: ${err.message}`);
+                } finally {
+                    event.target.value = '';
+                }
+            };
+            reader.readAsText(file);
+        }
+
         // --- XP & STREAK LOGIC ---
         function getStreakInfo() {
             if (sessions.length === 0) return 0;
-            let streak = 0;
-            const sorted = [...sessions].sort((a, b) => b.timestamp - a.timestamp);
-            const now = Date.now();
-            let lastTime = now;
 
-            for (let s of sorted) {
-                const diff = (lastTime - s.timestamp) / (1000 * 60 * 60 * 24);
-                if (diff <= 3.5) { // Within 3.5 days (buffer for "every other day" logic)
+            const msPerDay = 1000 * 60 * 60 * 24;
+            const uniqueDayStarts = [...new Set(
+                sessions
+                    .map(s => {
+                        const d = new Date(s.timestamp);
+                        return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+                    })
+            )].sort((a, b) => b - a);
+
+            let streak = 0;
+            let lastDayStart = new Date();
+            lastDayStart = new Date(lastDayStart.getFullYear(), lastDayStart.getMonth(), lastDayStart.getDate()).getTime();
+
+            for (const dayStart of uniqueDayStarts) {
+                const diffDays = (lastDayStart - dayStart) / msPerDay;
+                if (diffDays <= 3.5) { // Allows every-other-day training cadence with a small buffer
                     streak++;
-                    lastTime = s.timestamp;
+                    lastDayStart = dayStart;
                 } else {
                     break;
                 }
             }
+
             return streak;
         }
 
@@ -215,7 +347,7 @@
                     </div>
                 </div>
             `;
-            lucide.createIcons();
+            safeCreateIcons();
         }
 
         function startWorkout() {
@@ -255,7 +387,7 @@
                     <button onclick="saveWorkout()" class="w-full bg-white text-black p-6 rounded-[2.5rem] font-black text-lg italic uppercase shadow-2xl active:scale-95 transition-all">Submit Quest Result</button>
                 </div>
             `;
-            lucide.createIcons();
+            safeCreateIcons();
         }
 
         function renderSection(tierKey, label, color, data) {
@@ -272,7 +404,7 @@
                         return `
                         <div class="flex flex-col items-center gap-1">
                             <span class="text-[8px] font-black uppercase text-slate-500">${isAmrap ? 'AMRAP' : 'SET ' + (i+1)}</span>
-                            <input type="number" value="${r}" onchange="activeSession.${tierKey}.reps[${i}]=parseInt(this.value)" 
+                            <input type="number" min="0" value="${r}" onchange="activeSession.${tierKey}.reps[${i}] = sanitizeRepValue(this.value); this.value = activeSession.${tierKey}.reps[${i}]" 
                                    class="w-full h-12 bg-black/40 border-2 ${isAmrap ? 'amrap-input' : 'border-slate-800'} rounded-xl text-center text-xl font-black italic text-white outline-none">
                         </div>`;
                     }).join('')}
@@ -328,7 +460,7 @@
             };
 
             sessions.push(sessionData);
-            localStorage.setItem('gzclp_sessions', JSON.stringify(sessions));
+            if (canPersist) localStorage.setItem('gzclp_sessions', JSON.stringify(sessions));
             activeSession = null;
             stopTimer();
             renderSummary();
@@ -392,31 +524,51 @@
         function renderSettings() {
             setActiveNav('nav-settings');
             document.getElementById('app-content').innerHTML = `
-                <div class="space-y-6">
+                <div class="space-y-6 pb-8">
                     <h2 class="text-2xl font-black text-white italic tracking-tighter uppercase">The Armory</h2>
                     <div class="glass-card p-6 rounded-[2rem] space-y-4">
                         <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Base Weight Calibration</p>
                         ${Object.entries(userConfig.lifts).map(([name, lift]) => `
                             <div class="p-4 bg-black/30 rounded-2xl border border-white/5 flex justify-between items-center">
                                 <h4 class="text-xs font-black text-white italic uppercase">${name}</h4>
-                                <input type="number" value="${lift.t1Start}" onchange="userConfig.lifts['${name}'].t1Start=parseFloat(this.value); localStorage.setItem('gzclp_config', JSON.stringify(userConfig))"
+                                <input type="number" value="${lift.t1Start}" onchange="userConfig.lifts['${name}'].t1Start=parseFloat(this.value); saveConfig()"
                                        class="w-20 bg-slate-900 border border-white/5 rounded-lg p-2 text-white font-bold text-xs">
                             </div>
                         `).join('')}
                     </div>
-                    <button onclick="localStorage.clear(); location.reload();" class="w-full bg-rose-500/10 text-rose-500 p-4 rounded-2xl font-black text-[10px] uppercase border border-rose-500/20">Purge Character Progress</button>
+
+                    <div class="glass-card p-6 rounded-[2rem] space-y-3">
+                        <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Backups</p>
+                        <div class="grid grid-cols-2 gap-3">
+                            <button onclick="exportBackup()" class="bg-indigo-600 text-white p-3 rounded-xl font-black text-[10px] uppercase">Export JSON</button>
+                            <button onclick="triggerImport()" class="bg-slate-700 text-white p-3 rounded-xl font-black text-[10px] uppercase">Import JSON</button>
+                        </div>
+                        <input id="backup-import-input" type="file" accept="application/json" class="hidden" onchange="importBackup(event)">
+                        <p class="text-[9px] text-slate-500 font-bold uppercase tracking-widest">Tip: export weekly or after big PRs.</p>
+                    </div>
+
+                    <button onclick="clearAppData();" class="w-full bg-rose-500/10 text-rose-500 p-4 rounded-2xl font-black text-[10px] uppercase border border-rose-500/20">Purge Character Progress</button>
                 </div>`;
-            lucide.createIcons();
+            safeCreateIcons();
+        }
+
+        function registerServiceWorker() {
+            if (location.protocol === 'file:') return;
+            if ('serviceWorker' in navigator) {
+                window.addEventListener('load', () => {
+                    navigator.serviceWorker.register('./service-worker.js').catch(() => {});
+                });
+            }
         }
 
         // --- TIMER INIT ---
         function initTimer() {
-            const end = localStorage.getItem('gzclp_timer_end');
+            const end = canPersist ? localStorage.getItem('gzclp_timer_end') : null;
             if (end && parseInt(end) > Date.now()) startTimerAt(parseInt(end));
         }
         function startTimer(seconds) {
             const end = Date.now() + (seconds * 1000);
-            localStorage.setItem('gzclp_timer_end', end);
+            if (canPersist) localStorage.setItem('gzclp_timer_end', end);
             startTimerAt(end);
         }
         function startTimerAt(endTimestamp) {
@@ -437,10 +589,12 @@
             update();
             timerInterval = setInterval(update, 1000);
         }
-        function stopTimer() { clearInterval(timerInterval); localStorage.removeItem('gzclp_timer_end'); document.getElementById('rest-timer-ui').classList.add('hidden'); }
+        function stopTimer() { clearInterval(timerInterval); if (canPersist) localStorage.removeItem('gzclp_timer_end'); document.getElementById('rest-timer-ui').classList.add('hidden'); }
 
+        registerServiceWorker();
         initTimer();
         renderSummary();
+        if (!canPersist) alert('Storage is unavailable in this browser context. Progress cannot be saved.');
     </script>
 </body>
 </html>
