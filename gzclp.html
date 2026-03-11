@@ -6,6 +6,9 @@
     <title>GZCLP RPG Tracker</title>
     <link rel="manifest" href="manifest.webmanifest">
     <meta name="theme-color" content="#0f172a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="GZCLP">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
@@ -23,7 +26,23 @@
         .timer-complete { animation: pulse-red 2s infinite; background-color: #e11d48 !important; }
         .amrap-input { border-color: var(--amrap) !important; color: var(--amrap) !important; box-shadow: 0 0 10px rgba(245, 158, 11, 0.2); }
         .streak-fire { filter: drop-shadow(0 0 8px #f59e0b); }
-    </style>
+    
+
+        /* Single-file fallback layout when Tailwind CDN is unavailable */
+        header, main, nav { max-width: 480px; margin: 0 auto; }
+        header { position: sticky; top: 0; background: rgba(15, 23, 42, 0.9); border-bottom: 1px solid rgba(255,255,255,.08); padding: 1rem; z-index: 30; }
+        #app-content { padding: 1rem; }
+        nav { position: fixed; left: 0; right: 0; bottom: 0; display: grid; grid-template-columns: repeat(3,1fr); gap: .5rem; padding: .75rem 1rem; background: rgba(15, 23, 42, 0.95); border-top: 1px solid rgba(255,255,255,.08); z-index: 40; }
+        nav button { display: flex; flex-direction: column; align-items: center; gap: .2rem; background: transparent; border: 0; color: #94a3b8; font-weight: 700; font-size: .7rem; }
+        section, .glass-card { border-radius: 1rem; padding: 1rem; }
+        button { cursor: pointer; }
+        input[type="number"] { color: #fff; }
+        .hidden { display: none !important; }
+        .flex { display: flex; }
+        .justify-between { justify-content: space-between; }
+        .items-center { align-items: center; }
+        .grid { display: grid; }
+</style>
 </head>
 <body class="pb-32">
 
@@ -102,8 +121,31 @@
             }
         };
 
-        let userConfig = JSON.parse(localStorage.getItem('gzclp_config')) || JSON.parse(JSON.stringify(DEFAULT_CONFIG));
-        let sessions = JSON.parse(localStorage.getItem('gzclp_sessions')) || [];
+        function storageAvailable() {
+            try {
+                const key = '__gzclp_test__';
+                localStorage.setItem(key, '1');
+                localStorage.removeItem(key);
+                return true;
+            } catch {
+                return false;
+            }
+        }
+
+        const canPersist = storageAvailable();
+
+        function loadJSON(key, fallback) {
+            if (!canPersist) return fallback;
+            try {
+                const raw = localStorage.getItem(key);
+                return raw ? JSON.parse(raw) : fallback;
+            } catch {
+                return fallback;
+            }
+        }
+
+        let userConfig = loadJSON('gzclp_config', JSON.parse(JSON.stringify(DEFAULT_CONFIG)));
+        let sessions = loadJSON('gzclp_sessions', []);
         let activeSession = null;
         let timerInterval = null;
 
@@ -127,10 +169,15 @@
         }
 
         function saveConfig() {
+            if (!canPersist) return;
             localStorage.setItem('gzclp_config', JSON.stringify(userConfig));
         }
 
         function clearAppData() {
+            if (!canPersist) {
+                alert('Local storage is unavailable in this browser context.');
+                return;
+            }
             Object.keys(localStorage)
                 .filter(key => key.startsWith('gzclp_'))
                 .forEach(key => localStorage.removeItem(key));
@@ -172,7 +219,7 @@
                     }
                     sessions = parsed.sessions;
                     userConfig = parsed.config;
-                    localStorage.setItem('gzclp_sessions', JSON.stringify(sessions));
+                    if (canPersist) localStorage.setItem('gzclp_sessions', JSON.stringify(sessions));
                     saveConfig();
                     activeSession = null;
                     stopTimer();
@@ -413,7 +460,7 @@
             };
 
             sessions.push(sessionData);
-            localStorage.setItem('gzclp_sessions', JSON.stringify(sessions));
+            if (canPersist) localStorage.setItem('gzclp_sessions', JSON.stringify(sessions));
             activeSession = null;
             stopTimer();
             renderSummary();
@@ -516,12 +563,12 @@
 
         // --- TIMER INIT ---
         function initTimer() {
-            const end = localStorage.getItem('gzclp_timer_end');
+            const end = canPersist ? localStorage.getItem('gzclp_timer_end') : null;
             if (end && parseInt(end) > Date.now()) startTimerAt(parseInt(end));
         }
         function startTimer(seconds) {
             const end = Date.now() + (seconds * 1000);
-            localStorage.setItem('gzclp_timer_end', end);
+            if (canPersist) localStorage.setItem('gzclp_timer_end', end);
             startTimerAt(end);
         }
         function startTimerAt(endTimestamp) {
@@ -542,11 +589,12 @@
             update();
             timerInterval = setInterval(update, 1000);
         }
-        function stopTimer() { clearInterval(timerInterval); localStorage.removeItem('gzclp_timer_end'); document.getElementById('rest-timer-ui').classList.add('hidden'); }
+        function stopTimer() { clearInterval(timerInterval); if (canPersist) localStorage.removeItem('gzclp_timer_end'); document.getElementById('rest-timer-ui').classList.add('hidden'); }
 
         registerServiceWorker();
         initTimer();
         renderSummary();
+        if (!canPersist) alert('Storage is unavailable in this browser context. Progress cannot be saved.');
     </script>
 </body>
 </html>

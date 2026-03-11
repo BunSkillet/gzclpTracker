@@ -1,41 +1,47 @@
 # GZCLP RPG Tracker
 
-A single-file mobile-friendly GZCLP tracker (`gzclp.html`) with local persistence, streaks, XP, and backup import/export.
+A phone-first GZCLP workout tracker.
 
-## Quick start (phone, single-file mode)
+## Single-file mode (primary workflow)
 
-If you want to **just download one HTML file and use it on your phone**:
+If you want the simplest setup, only use:
 
-1. Copy `gzclp.html` to your phone.
-2. Open it in a mobile browser (Chrome/Safari/Edge).
-3. Use the app normally.
+- `gzclp.html`
 
-### Important notes for single-file mode
+### Steps
 
-- Data is saved in browser storage (`localStorage`) on that device/browser profile.
-- If you clear browser site data, uninstall the browser, or switch browsers/devices, data may be lost.
-- In `file://` mode, service workers/PWA install flow are not used (this is expected).
-- The app now safely handles missing icon CDN loads so core tracking still works even if icon assets fail.
+1. Download/copy `gzclp.html` to your phone.
+2. Open it directly from your Files app in your mobile browser.
+3. (Optional) Add a browser shortcut to your home screen.
 
-## Recommended mode (best phone app-like behavior)
+### What works in single-file mode
 
-For better install/offline behavior, host the files with a web server and open via `http://` or `https://`:
+- Full training flow (summary, workout logging, history, settings)
+- Local save via browser `localStorage`
+- Export/import JSON backups from Armory
+- Works even if icon CDN fails (icons may disappear, app still functions)
+
+### Single-file limitations
+
+- Data is tied to that browser profile/device.
+- Clearing site data, reinstalling browser, or changing device can remove history.
+- `file://` pages do not use service worker install/caching flow.
+
+## Best reliability practice
+
+- Export JSON weekly (or after big PR sessions).
+- Keep at least one backup file in cloud storage.
+
+## Multi-file hosted mode (optional)
+
+If you host files over `http/https`, include:
 
 - `gzclp.html`
 - `manifest.webmanifest`
 - `service-worker.js`
 
-Then use your browser's **Add to Home Screen** option.
-
-## Backup and restore
-
-In **Armory → Backups**:
-
-- **Export JSON** creates a backup file with config + sessions.
-- **Import JSON** restores from that backup format.
-
-Tip: export weekly or after important PR sessions.
+This enables proper PWA-style install/offline behavior in supporting browsers.
 
 ## Data reset behavior
 
-"Purge Character Progress" only removes this app's keys (`gzclp_*`) from localStorage.
+"Purge Character Progress" only removes this app's keys (`gzclp_*`) instead of clearing all browser storage.
