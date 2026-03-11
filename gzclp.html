@@ -29,6 +29,75 @@
     
 
         /* Single-file fallback layout when Tailwind CDN is unavailable */
+        body {
+            margin: 0;
+            padding-bottom: calc(9rem + env(safe-area-inset-bottom));
+        }
+        header, main, nav { max-width: 480px; margin: 0 auto; }
+        header {
+            position: sticky;
+            top: 0;
+            background: rgba(15, 23, 42, 0.92);
+            border-bottom: 1px solid rgba(255,255,255,.08);
+            padding: 1rem;
+            z-index: 30;
+        }
+        main {
+            padding: 1rem;
+            padding-bottom: calc(12rem + env(safe-area-inset-bottom));
+        }
+        #app-content {
+            padding: 0;
+            padding-bottom: calc(7rem + env(safe-area-inset-bottom));
+        }
+        #rest-timer-ui {
+            bottom: calc(7rem + env(safe-area-inset-bottom));
+        }
+        nav {
+            position: fixed;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            display: grid;
+            grid-template-columns: repeat(3,1fr);
+            gap: .5rem;
+            padding: .75rem 1rem calc(.9rem + env(safe-area-inset-bottom));
+            background: rgba(15, 23, 42, 0.96);
+            border-top: 1px solid rgba(255,255,255,.08);
+            z-index: 40;
+        }
+        nav button {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: .25rem;
+            min-height: 2.75rem;
+            background: transparent;
+            border: 0;
+            color: #94a3b8;
+            font-weight: 700;
+            font-size: .7rem;
+        }
+        section, .glass-card {
+            border-radius: 1rem;
+            padding: 1rem;
+            background: rgba(30, 41, 59, 0.7);
+        }
+        button {
+            cursor: pointer;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+        input[type="number"] {
+            background: #0b1220 !important;
+            color: #e2e8f0 !important;
+            border: 1px solid #334155 !important;
+            border-radius: .75rem;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+        input[type="number"]::placeholder { color: #94a3b8; }
         header, main, nav { max-width: 480px; margin: 0 auto; }
         header { position: sticky; top: 0; background: rgba(15, 23, 42, 0.9); border-bottom: 1px solid rgba(255,255,255,.08); padding: 1rem; z-index: 30; }
         #app-content { padding: 1rem; }
@@ -160,6 +229,78 @@
             const parsed = Number.parseInt(rawValue, 10);
             if (Number.isNaN(parsed) || parsed < 0) return 0;
             return parsed;
+        }
+
+        function safeCreateIcons() {
+            if (window.lucide && typeof window.lucide.createIcons === 'function') {
+                window.lucide.createIcons();
+            }
+        }
+
+        function saveConfig() {
+            if (!canPersist) return;
+            localStorage.setItem('gzclp_config', JSON.stringify(userConfig));
+        }
+
+        function clearAppData() {
+            if (!canPersist) {
+                alert('Local storage is unavailable in this browser context.');
+                return;
+            }
+            Object.keys(localStorage)
+                .filter(key => key.startsWith('gzclp_'))
+                .forEach(key => localStorage.removeItem(key));
+            location.reload();
+        }
+
+        function exportBackup() {
+            const payload = {
+                app: 'gzclp-tracker',
+                version: 1,
+                exportedAt: new Date().toISOString(),
+                config: userConfig,
+                sessions
+            };
+            const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `gzclp-backup-${new Date().toISOString().slice(0, 10)}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function triggerImport() {
+            const input = document.getElementById('backup-import-input');
+            if (input) input.click();
+        }
+
+        function importBackup(event) {
+            const file = event.target.files?.[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = () => {
+                try {
+                    const parsed = JSON.parse(reader.result);
+                    if (!parsed || !Array.isArray(parsed.sessions) || !parsed.config) {
+                        throw new Error('Invalid backup file format.');
+                    }
+                    sessions = parsed.sessions;
+                    userConfig = parsed.config;
+                    if (canPersist) localStorage.setItem('gzclp_sessions', JSON.stringify(sessions));
+                    saveConfig();
+                    activeSession = null;
+                    stopTimer();
+                    renderSummary();
+                    alert(`Backup imported: ${sessions.length} sessions loaded.`);
+                } catch (err) {
+                    alert(`Import failed: ${err.message}`);
+                } finally {
+                    event.target.value = '';
+                }
+            };
+            reader.readAsText(file);
         }
 
         // --- XP & STREAK LOGIC ---
@@ -299,7 +440,7 @@
 
         function renderTracker() {
             document.getElementById('app-content').innerHTML = `
-                <div class="space-y-8 pb-12">
+                <div class="space-y-8 pb-12" style="padding-bottom: calc(12rem + env(safe-area-inset-bottom));">
                     <div class="flex justify-between items-center">
                         <span class="text-[10px] font-black text-indigo-400 uppercase tracking-widest italic">${activeSession.dayLabel} Quest</span>
                         <div class="flex gap-2">
