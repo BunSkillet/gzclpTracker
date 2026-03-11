@@ -98,6 +98,14 @@
             appearance: none;
         }
         input[type="number"]::placeholder { color: #94a3b8; }
+        header, main, nav { max-width: 480px; margin: 0 auto; }
+        header { position: sticky; top: 0; background: rgba(15, 23, 42, 0.9); border-bottom: 1px solid rgba(255,255,255,.08); padding: 1rem; z-index: 30; }
+        #app-content { padding: 1rem; }
+        nav { position: fixed; left: 0; right: 0; bottom: 0; display: grid; grid-template-columns: repeat(3,1fr); gap: .5rem; padding: .75rem 1rem; background: rgba(15, 23, 42, 0.95); border-top: 1px solid rgba(255,255,255,.08); z-index: 40; }
+        nav button { display: flex; flex-direction: column; align-items: center; gap: .2rem; background: transparent; border: 0; color: #94a3b8; font-weight: 700; font-size: .7rem; }
+        section, .glass-card { border-radius: 1rem; padding: 1rem; }
+        button { cursor: pointer; }
+        input[type="number"] { color: #fff; }
         .hidden { display: none !important; }
         .flex { display: flex; }
         .justify-between { justify-content: space-between; }
@@ -532,7 +540,8 @@
             const level = Math.floor(total / 500) + 1;
             const progress = ((total % 500) / 500) * 100;
             const rank = level < 3 ? "Rookie" : level < 8 ? "Warrior" : level < 15 ? "Knight" : "Warlord";
-            return { total, level, progress, rank, remaining: 500 - (total % 500) };
+            const remainder = total % 500;
+            return { total, level, progress, rank, remaining: remainder === 0 ? 0 : 500 - remainder };
         }
 
         function updateRPGHeader() {
