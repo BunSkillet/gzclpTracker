@@ -1,0 +1,10 @@
+{
+  "name": "GZCLP RPG Tracker",
+  "short_name": "GZCLP",
+  "start_url": "./gzclp.html",
+  "display": "standalone",
+  "background_color": "#05070a",
+  "theme_color": "#0f172a",
+  "description": "Track GZCLP sessions, progression, and XP on your phone.",
+  "icons": []
+}
