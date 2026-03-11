@@ -162,78 +162,6 @@
             return parsed;
         }
 
-        function safeCreateIcons() {
-            if (window.lucide && typeof window.lucide.createIcons === 'function') {
-                window.lucide.createIcons();
-            }
-        }
-
-        function saveConfig() {
-            if (!canPersist) return;
-            localStorage.setItem('gzclp_config', JSON.stringify(userConfig));
-        }
-
-        function clearAppData() {
-            if (!canPersist) {
-                alert('Local storage is unavailable in this browser context.');
-                return;
-            }
-            Object.keys(localStorage)
-                .filter(key => key.startsWith('gzclp_'))
-                .forEach(key => localStorage.removeItem(key));
-            location.reload();
-        }
-
-        function exportBackup() {
-            const payload = {
-                app: 'gzclp-tracker',
-                version: 1,
-                exportedAt: new Date().toISOString(),
-                config: userConfig,
-                sessions
-            };
-            const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `gzclp-backup-${new Date().toISOString().slice(0, 10)}.json`;
-            a.click();
-            URL.revokeObjectURL(url);
-        }
-
-        function triggerImport() {
-            const input = document.getElementById('backup-import-input');
-            if (input) input.click();
-        }
-
-        function importBackup(event) {
-            const file = event.target.files?.[0];
-            if (!file) return;
-
-            const reader = new FileReader();
-            reader.onload = () => {
-                try {
-                    const parsed = JSON.parse(reader.result);
-                    if (!parsed || !Array.isArray(parsed.sessions) || !parsed.config) {
-                        throw new Error('Invalid backup file format.');
-                    }
-                    sessions = parsed.sessions;
-                    userConfig = parsed.config;
-                    if (canPersist) localStorage.setItem('gzclp_sessions', JSON.stringify(sessions));
-                    saveConfig();
-                    activeSession = null;
-                    stopTimer();
-                    renderSummary();
-                    alert(`Backup imported: ${sessions.length} sessions loaded.`);
-                } catch (err) {
-                    alert(`Import failed: ${err.message}`);
-                } finally {
-                    event.target.value = '';
-                }
-            };
-            reader.readAsText(file);
-        }
-
         // --- XP & STREAK LOGIC ---
         function getStreakInfo() {
             if (sessions.length === 0) return 0;
@@ -471,7 +399,8 @@
             const level = Math.floor(total / 500) + 1;
             const progress = ((total % 500) / 500) * 100;
             const rank = level < 3 ? "Rookie" : level < 8 ? "Warrior" : level < 15 ? "Knight" : "Warlord";
-            return { total, level, progress, rank, remaining: 500 - (total % 500) };
+            const remainder = total % 500;
+            return { total, level, progress, rank, remaining: remainder === 0 ? 0 : 500 - remainder };
         }
 
         function updateRPGHeader() {
