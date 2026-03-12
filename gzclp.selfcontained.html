@@ -612,7 +612,7 @@
             const t2Cfg = userConfig.schemes.T2[activeSession.t2.stage - 1];
             const t3Cfg = userConfig.schemes.T3;
             document.getElementById('app-content').innerHTML = `
-                <div class="space-y-4 pb-8" style="padding-bottom: 6.75rem;">
+                <div class="space-y-5 pb-8" style="padding-bottom: 6.75rem;">
                     <div class="flex justify-between items-center">
                         <span class="text-[10px] font-black text-indigo-400 uppercase tracking-widest italic">${activeSession.dayLabel} Quest</span>
                         <span class="text-[9px] text-slate-400 font-black uppercase">Log Reps</span>
@@ -621,11 +621,6 @@
                     ${renderSection('t1', 'Tier 1 • Main Lift', 'indigo', activeSession.t1, { scheme: `${t1Cfg.sets}x${t1Cfg.reps}+` })}
                     ${renderSection('t2', 'Tier 2 • Volume', 'slate', activeSession.t2, { scheme: `${t2Cfg.sets}x${t2Cfg.reps}` })}
                     ${renderSection('t3', 'Tier 3 • Accessory', 'emerald', activeSession.t3, { scheme: `${t3Cfg.sets}x${t3Cfg.reps}+` })}
-
-                    <div class="glass-card p-4 rounded-2xl">
-                        <p class="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-2">Session Notes</p>
-                        <input type="text" value="${escapeAttr(activeSession.notes || '')}" placeholder="How did this session feel?" onchange="activeSession.notes=this.value;persistActiveSession();" class="w-full bg-black/30 border border-white/10 rounded-xl p-3 text-white text-sm">
-                    </div>
 
                     <button onclick="saveWorkout()" class="w-full bg-white text-black p-6 mt-4 rounded-[2.5rem] font-black text-lg italic uppercase shadow-2xl active:scale-95 transition-all">Submit Quest Result</button>
                 </div>
