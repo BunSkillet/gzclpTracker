@@ -569,7 +569,7 @@
                         return `
                         <div class="flex flex-col items-center gap-1">
                             <span class="text-[8px] font-black uppercase text-slate-500">${isAmrap ? 'AMRAP' : 'SET ' + (i + 1)}</span>
-                            <input type="number" inputmode="numeric" pattern="[0-9]*" enterkeyhint="done" min="0" value="${r == null ? '' : r}" placeholder="-" onchange="activeSession.${tierKey}.reps[${i}] = this.value === '' ? null : sanitizeRepValue(this.value); this.value = activeSession.${tierKey}.reps[${i}] == null ? '' : activeSession.${tierKey}.reps[${i}]; persistActiveSession()" class="rep-input w-full bg-black/40 border-2 ${isAmrap ? 'amrap-input' : 'border-slate-800'} rounded-xl text-center font-black italic text-white outline-none">
+                            <input type="number" inputmode="numeric" pattern="[0-9]*" enterkeyhint="done" min="0" value="${r == null ? '' : r}" placeholder="-" onchange="activeSession.${tierKey}.reps[${i}] = this.value === '' ? null : sanitizeRepValue(this.value); this.value = activeSession.${tierKey}.reps[${i}] == null ? '' : activeSession.${tierKey}.reps[${i}]" class="rep-input w-full bg-black/40 border-2 ${isAmrap ? 'amrap-input' : 'border-slate-800'} rounded-xl text-center font-black italic text-white outline-none">
                         </div>`;
                     }).join('')}
                 </div>
