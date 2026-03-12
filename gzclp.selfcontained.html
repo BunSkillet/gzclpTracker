@@ -40,11 +40,11 @@
         }
         main {
             padding: .75rem .9rem;
-            padding-bottom: 8.75rem;
+            padding-bottom: 6.5rem;
         }
         #app-content {
             padding: 0;
-            padding-bottom: 7.25rem;
+            padding-bottom: 4.75rem;
         }
         #rest-timer-ui {
             bottom: 5.4rem;
@@ -530,7 +530,7 @@
             const t2Cfg = userConfig.schemes.T2[activeSession.t2.stage - 1];
             const t3Cfg = userConfig.schemes.T3;
             document.getElementById('app-content').innerHTML = `
-                <div class="space-y-5 pb-8" style="padding-bottom: 10.5rem;">
+                <div class="space-y-5 pb-8" style="padding-bottom: 6.75rem;">
                     <div class="flex justify-between items-center">
                         <span class="text-[10px] font-black text-indigo-400 uppercase tracking-widest italic">${activeSession.dayLabel} Quest</span>
                         <span class="text-[9px] text-slate-400 font-black uppercase">Log Reps</span>
@@ -540,12 +540,12 @@
                     ${renderSection('t2', 'Tier 2 • Volume', 'slate', activeSession.t2, { scheme: `${t2Cfg.sets}x${t2Cfg.reps}` })}
                     ${renderSection('t3', 'Tier 3 • Accessory', 'emerald', activeSession.t3, { scheme: `${t3Cfg.sets}x${t3Cfg.reps}+` })}
 
-                    <button onclick="saveWorkout()" class="w-full bg-white text-black p-6 rounded-[2.5rem] font-black text-lg italic uppercase shadow-2xl active:scale-95 transition-all">Submit Quest Result</button>
+                    <button onclick="saveWorkout()" class="w-full bg-white text-black p-6 mt-4 rounded-[2.5rem] font-black text-lg italic uppercase shadow-2xl active:scale-95 transition-all">Submit Quest Result</button>
                 </div>
                 <div id="timer-controls" class="fixed left-6 right-6 z-40" style="bottom: calc(6.5rem + env(safe-area-inset-bottom));">
                     <div class="glass-card p-3 rounded-2xl flex gap-2 justify-between">
-                        <button onclick="startTimer(90)" class="w-full bg-slate-800 text-[10px] font-black px-4 py-3 rounded-xl">90S REST</button>
-                        <button onclick="startTimer(180)" class="w-full bg-indigo-600 text-[10px] font-black px-4 py-3 rounded-xl">3M REST</button>
+                        <button onclick="startTimer(90)" class="w-full bg-slate-800 text-sm font-black px-5 py-2.5 rounded-2xl">90S REST</button>
+                        <button onclick="startTimer(180)" class="w-full bg-indigo-600 text-sm font-black px-5 py-2.5 rounded-2xl">3M REST</button>
                     </div>
                 </div>
             `;
