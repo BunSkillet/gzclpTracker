@@ -97,8 +97,8 @@
             appearance: none;
         }
         input[type="number"]::placeholder { color: #94a3b8; }
-        .rep-grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(52px, 1fr)); gap: .5rem; }
-        .rep-input { height: 2.5rem; font-size: 1rem; }
+        .rep-grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(44px, 1fr)); gap: .4rem; }
+        .rep-input { height: 2.1rem; font-size: .92rem; padding: .2rem; }
 
         @media (max-width: 390px) {
             body { padding-bottom: calc(8.25rem + env(safe-area-inset-bottom)); }
@@ -111,7 +111,7 @@
 
         @media (min-width: 430px) {
             header, main, nav { max-width: 520px; }
-            .rep-grid { grid-template-columns: repeat(auto-fit, minmax(58px, 1fr)); }
+            .rep-grid { grid-template-columns: repeat(auto-fit, minmax(50px, 1fr)); }
         }
 
         .hidden { display: none !important; }
@@ -304,6 +304,27 @@
             localStorage.setItem('gzclp_config', JSON.stringify(userConfig));
         }
 
+        function persistActiveSession() {
+            if (!canPersist) return;
+            if (!activeSession) {
+                localStorage.removeItem('gzclp_active_session');
+                return;
+            }
+            localStorage.setItem('gzclp_active_session', JSON.stringify(activeSession));
+        }
+
+        function clearActiveSession() {
+            activeSession = null;
+            if (canPersist) localStorage.removeItem('gzclp_active_session');
+        }
+
+        function refreshTimerControlsVisibility() {
+            const controls = document.getElementById('timer-controls');
+            const timerShown = !document.getElementById('rest-timer-ui').classList.contains('hidden');
+            if (!controls) return;
+            controls.classList.toggle('hidden', timerShown);
+        }
+
         function clearAppData() {
             if (!canPersist) {
                 alert('Local storage is unavailable in this browser context.');
@@ -353,7 +374,7 @@
                     userConfig = parsed.config;
                     if (canPersist) localStorage.setItem('gzclp_sessions', JSON.stringify(sessions));
                     saveConfig();
-                    activeSession = null;
+                    clearActiveSession();
                     stopTimer();
                     renderSummary();
                     alert(`Backup imported: ${sessions.length} sessions loaded.`);
@@ -435,15 +456,16 @@
             updateRPGHeader();
             setActiveNav('nav-summary');
             const stats = getLiftStats();
+            const hasActiveSession = !!activeSession;
             document.getElementById('app-content').innerHTML = `
                 <div class="space-y-6">
-                    <button onclick="startWorkout()" class="w-full bg-indigo-600 p-6 rounded-[2.5rem] border-t border-white/20 shadow-2xl active:scale-[0.98] transition-all relative overflow-hidden group">
+                    <button onclick="${hasActiveSession ? 'renderTracker()' : 'startWorkout()'}" class="w-full bg-indigo-600 p-6 rounded-[2.5rem] border-t border-white/20 shadow-2xl active:scale-[0.98] transition-all relative overflow-hidden group">
                         <div class="absolute inset-0 bg-white/5 opacity-0 group-active:opacity-100 transition-opacity"></div>
                         <div class="flex justify-between items-center relative z-10">
                             <div class="text-left">
-                                <span class="text-[10px] font-black text-indigo-200 uppercase tracking-widest">Next Quest</span>
-                                <h3 class="text-white text-2xl font-black italic tracking-tighter uppercase">Enter Dungeon</h3>
-                                <p class="text-[10px] text-indigo-300 font-bold uppercase mt-1">${getNextDay().dayLabel} - ${getNextDay().t1}</p>
+                                <span class="text-[10px] font-black text-indigo-200 uppercase tracking-widest">${hasActiveSession ? 'In Progress' : 'Next Quest'}</span>
+                                <h3 class="text-white text-2xl font-black italic tracking-tighter uppercase">${hasActiveSession ? 'Resume Dungeon' : 'Enter Dungeon'}</h3>
+                                <p class="text-[10px] text-indigo-300 font-bold uppercase mt-1">${hasActiveSession ? activeSession.dayLabel + ' - ' + activeSession.t1.lift : getNextDay().dayLabel + ' - ' + getNextDay().t1}</p>
                             </div>
                             <i data-lucide="sword" class="text-white w-8 h-8 opacity-30 transform group-hover:rotate-12 transition-transform"></i>
                         </div>
@@ -480,6 +502,7 @@
                 </div>
             `;
             safeCreateIcons();
+            refreshTimerControlsVisibility();
         }
 
         function startWorkout() {
@@ -498,6 +521,7 @@
                 t2: { lift: day.t2, weight: t2Data.t2Weight, stage: t2Data.t2Stage, reps: Array(t2Cfg.sets).fill(null) },
                 t3: { lift: day.t3, weight: stats.accessories[day.t3], reps: [null, null, null] }
             };
+            persistActiveSession();
             renderTracker();
         }
 
@@ -518,7 +542,7 @@
 
                     <button onclick="saveWorkout()" class="w-full bg-white text-black p-6 rounded-[2.5rem] font-black text-lg italic uppercase shadow-2xl active:scale-95 transition-all">Submit Quest Result</button>
                 </div>
-                <div class="fixed left-6 right-6 z-40" style="bottom: calc(6.5rem + env(safe-area-inset-bottom));">
+                <div id="timer-controls" class="fixed left-6 right-6 z-40" style="bottom: calc(6.5rem + env(safe-area-inset-bottom));">
                     <div class="glass-card p-3 rounded-2xl flex gap-2 justify-between">
                         <button onclick="startTimer(90)" class="w-full bg-slate-800 text-[10px] font-black px-4 py-3 rounded-xl">90S REST</button>
                         <button onclick="startTimer(180)" class="w-full bg-indigo-600 text-[10px] font-black px-4 py-3 rounded-xl">3M REST</button>
@@ -526,6 +550,7 @@
                 </div>
             `;
             safeCreateIcons();
+            refreshTimerControlsVisibility();
         }
 
         function renderSection(tierKey, label, color, data, meta = {}) {
@@ -600,7 +625,7 @@
 
             sessions.push(sessionData);
             if (canPersist) localStorage.setItem('gzclp_sessions', JSON.stringify(sessions));
-            activeSession = null;
+            clearActiveSession();
             stopTimer();
             renderSummary();
         }
@@ -706,6 +731,7 @@
         function initTimer() {
             const end = canPersist ? localStorage.getItem('gzclp_timer_end') : null;
             if (end && parseInt(end) > Date.now()) startTimerAt(parseInt(end));
+            else refreshTimerControlsVisibility();
         }
         function startTimer(seconds) {
             const end = Date.now() + (seconds * 1000);
@@ -717,6 +743,7 @@
             clearTimeout(timerHideTimeout);
             document.getElementById('rest-timer-ui').classList.remove('hidden');
             document.getElementById('timer-pill').classList.remove('timer-complete');
+            refreshTimerControlsVisibility();
             const update = () => {
                 const now = Date.now();
                 const remaining = Math.max(0, Math.ceil((endTimestamp - now) / 1000));
@@ -737,10 +764,18 @@
             clearTimeout(timerHideTimeout);
             if (clearStored && canPersist) localStorage.removeItem('gzclp_timer_end');
             document.getElementById('rest-timer-ui').classList.add('hidden');
+            refreshTimerControlsVisibility();
         }
-        function stopTimer() { clearInterval(timerInterval); if (canPersist) localStorage.removeItem('gzclp_timer_end'); document.getElementById('rest-timer-ui').classList.add('hidden'); }
+
+        function initActiveSession() {
+            const saved = loadJSON('gzclp_active_session', null);
+            if (saved && saved.t1 && saved.t2 && saved.t3) {
+                activeSession = saved;
+            }
+        }
 
         registerServiceWorker();
+        initActiveSession();
         initTimer();
         renderSummary();
         if (!canPersist) alert('Storage is unavailable in this browser context. Progress cannot be saved.');
