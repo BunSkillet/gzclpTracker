@@ -27,7 +27,7 @@
         /* Single-file fallback layout when Tailwind CDN is unavailable */
         body {
             margin: 0;
-            padding-bottom: calc(9rem + env(safe-area-inset-bottom));
+            padding-bottom: 6.25rem;
         }
         header, main, nav { max-width: 480px; margin: 0 auto; }
         header {
@@ -35,19 +35,19 @@
             top: 0;
             background: linear-gradient(180deg, rgba(15,23,42,.96), rgba(15,23,42,.88));
             border-bottom: 1px solid rgba(255,255,255,.08);
-            padding: 1rem;
+            padding: .75rem .9rem;
             z-index: 30;
         }
         main {
-            padding: 1rem;
-            padding-bottom: calc(12rem + env(safe-area-inset-bottom));
+            padding: .75rem .9rem;
+            padding-bottom: 8.75rem;
         }
         #app-content {
             padding: 0;
-            padding-bottom: calc(10rem + env(safe-area-inset-bottom));
+            padding-bottom: 7.25rem;
         }
         #rest-timer-ui {
-            bottom: calc(7rem + env(safe-area-inset-bottom));
+            bottom: 5.4rem;
         }
         nav {
             position: fixed;
@@ -57,7 +57,7 @@
             display: grid;
             grid-template-columns: repeat(3,1fr);
             gap: .5rem;
-            padding: .75rem 1rem calc(.9rem + env(safe-area-inset-bottom));
+            padding: .55rem .85rem .55rem;
             background: linear-gradient(180deg, rgba(15,23,42,.94), rgba(15,23,42,.99));
             border-top: 1px solid rgba(255,255,255,.08);
             z-index: 40;
@@ -68,7 +68,7 @@
             align-items: center;
             justify-content: center;
             gap: .25rem;
-            min-height: 2.75rem;
+            min-height: 2.35rem;
             background: transparent;
             border: 0;
             color: #94a3b8;
@@ -97,21 +97,21 @@
             appearance: none;
         }
         input[type="number"]::placeholder { color: #94a3b8; }
-        .rep-grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(52px, 1fr)); gap: .5rem; }
-        .rep-input { height: 2.5rem; font-size: 1rem; }
+        .rep-grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(44px, 1fr)); gap: .4rem; }
+        .rep-input { height: 2.1rem; font-size: .92rem; padding: .2rem; }
 
         @media (max-width: 390px) {
-            body { padding-bottom: calc(8.25rem + env(safe-area-inset-bottom)); }
-            main { padding: .8rem; padding-bottom: calc(11rem + env(safe-area-inset-bottom)); }
-            nav { padding: .6rem .75rem calc(.8rem + env(safe-area-inset-bottom)); }
-            nav button { min-height: 2.35rem; font-size: .62rem; }
+            body { padding-bottom: 6rem; }
+            main { padding: .65rem .75rem; padding-bottom: 8.25rem; }
+            nav { padding: .5rem .65rem .5rem; }
+            nav button { min-height: 2.2rem; font-size: .62rem; }
             .rep-input { height: 2.2rem; font-size: .92rem; }
             #timer-pill { padding: .7rem 1rem; }
         }
 
         @media (min-width: 430px) {
             header, main, nav { max-width: 520px; }
-            .rep-grid { grid-template-columns: repeat(auto-fit, minmax(58px, 1fr)); }
+            .rep-grid { grid-template-columns: repeat(auto-fit, minmax(50px, 1fr)); }
         }
 
         .hidden { display: none !important; }
@@ -154,10 +154,10 @@
         .text-indigo-300{color:#a5b4fc}.text-slate-300{color:#cbd5e1}.text-emerald-300{color:#6ee7b7}.text-indigo-400{color:#818cf8}.text-slate-400{color:#94a3b8}.text-emerald-400{color:#34d399}
 </style>
 </head>
-<body class="pb-32">
+<body class="pb-24">
 
     <!-- RPG Header -->
-    <header class="bg-[#0f172a]/80 backdrop-blur-xl border-b border-white/5 px-6 py-6 sticky top-0 z-40">
+    <header class="bg-[#0f172a]/80 backdrop-blur-xl border-b border-white/5 px-4 py-4 sticky top-0 z-40">
         <div class="max-w-md mx-auto">
             <div class="flex justify-between items-start mb-4">
                 <div>
@@ -198,9 +198,9 @@
         </div>
     </div>
 
-    <main id="app-content" class="max-w-md mx-auto p-6 space-y-8"></main>
+    <main id="app-content" class="max-w-md mx-auto p-4 space-y-6"></main>
 
-    <nav class="fixed bottom-0 left-0 right-0 bg-[#0f172a]/90 backdrop-blur-lg border-t border-white/5 px-8 py-5 flex justify-between items-center max-w-md mx-auto z-40">
+    <nav class="fixed bottom-0 left-0 right-0 bg-[#0f172a]/90 backdrop-blur-lg border-t border-white/5 px-5 py-3 flex justify-between items-center max-w-md mx-auto z-40">
         <button onclick="renderSummary()" class="nav-btn flex flex-col items-center gap-1 text-indigo-400" id="nav-summary"><i data-lucide="layout-grid"></i><span class="text-[10px] font-black uppercase">Hero</span></button>
         <button onclick="renderHistory()" class="nav-btn flex flex-col items-center gap-1 text-slate-500" id="nav-history"><i data-lucide="scroll"></i><span class="text-[10px] font-black uppercase">Log</span></button>
         <button onclick="renderSettings()" class="nav-btn flex flex-col items-center gap-1 text-slate-500" id="nav-settings"><i data-lucide="swords"></i><span class="text-[10px] font-black uppercase">Armory</span></button>
@@ -237,7 +237,7 @@
                 localStorage.setItem(key, '1');
                 localStorage.removeItem(key);
                 return true;
-            } catch {
+            } catch (err) {
                 return false;
             }
         }
@@ -249,7 +249,7 @@
             try {
                 const raw = localStorage.getItem(key);
                 return raw ? JSON.parse(raw) : fallback;
-            } catch {
+            } catch (err) {
                 return fallback;
             }
         }
@@ -304,6 +304,27 @@
             localStorage.setItem('gzclp_config', JSON.stringify(userConfig));
         }
 
+        function persistActiveSession() {
+            if (!canPersist) return;
+            if (!activeSession) {
+                localStorage.removeItem('gzclp_active_session');
+                return;
+            }
+            localStorage.setItem('gzclp_active_session', JSON.stringify(activeSession));
+        }
+
+        function clearActiveSession() {
+            activeSession = null;
+            if (canPersist) localStorage.removeItem('gzclp_active_session');
+        }
+
+        function refreshTimerControlsVisibility() {
+            const controls = document.getElementById('timer-controls');
+            const timerShown = !document.getElementById('rest-timer-ui').classList.contains('hidden');
+            if (!controls) return;
+            controls.classList.toggle('hidden', timerShown);
+        }
+
         function clearAppData() {
             if (!canPersist) {
                 alert('Local storage is unavailable in this browser context.');
@@ -338,7 +359,8 @@
         }
 
         function importBackup(event) {
-            const file = event.target.files?.[0];
+            const target = event.target;
+            const file = target && target.files ? target.files[0] : null;
             if (!file) return;
 
             const reader = new FileReader();
@@ -352,7 +374,7 @@
                     userConfig = parsed.config;
                     if (canPersist) localStorage.setItem('gzclp_sessions', JSON.stringify(sessions));
                     saveConfig();
-                    activeSession = null;
+                    clearActiveSession();
                     stopTimer();
                     renderSummary();
                     alert(`Backup imported: ${sessions.length} sessions loaded.`);
@@ -434,15 +456,16 @@
             updateRPGHeader();
             setActiveNav('nav-summary');
             const stats = getLiftStats();
+            const hasActiveSession = !!activeSession;
             document.getElementById('app-content').innerHTML = `
                 <div class="space-y-6">
-                    <button onclick="startWorkout()" class="w-full bg-indigo-600 p-6 rounded-[2.5rem] border-t border-white/20 shadow-2xl active:scale-[0.98] transition-all relative overflow-hidden group">
+                    <button onclick="${hasActiveSession ? 'renderTracker()' : 'startWorkout()'}" class="w-full bg-indigo-600 p-6 rounded-[2.5rem] border-t border-white/20 shadow-2xl active:scale-[0.98] transition-all relative overflow-hidden group">
                         <div class="absolute inset-0 bg-white/5 opacity-0 group-active:opacity-100 transition-opacity"></div>
                         <div class="flex justify-between items-center relative z-10">
                             <div class="text-left">
-                                <span class="text-[10px] font-black text-indigo-200 uppercase tracking-widest">Next Quest</span>
-                                <h3 class="text-white text-2xl font-black italic tracking-tighter uppercase">Enter Dungeon</h3>
-                                <p class="text-[10px] text-indigo-300 font-bold uppercase mt-1">${getNextDay().dayLabel} - ${getNextDay().t1}</p>
+                                <span class="text-[10px] font-black text-indigo-200 uppercase tracking-widest">${hasActiveSession ? 'In Progress' : 'Next Quest'}</span>
+                                <h3 class="text-white text-2xl font-black italic tracking-tighter uppercase">${hasActiveSession ? 'Resume Dungeon' : 'Enter Dungeon'}</h3>
+                                <p class="text-[10px] text-indigo-300 font-bold uppercase mt-1">${hasActiveSession ? activeSession.dayLabel + ' - ' + activeSession.t1.lift : getNextDay().dayLabel + ' - ' + getNextDay().t1}</p>
                             </div>
                             <i data-lucide="sword" class="text-white w-8 h-8 opacity-30 transform group-hover:rotate-12 transition-transform"></i>
                         </div>
@@ -479,6 +502,7 @@
                 </div>
             `;
             safeCreateIcons();
+            refreshTimerControlsVisibility();
         }
 
         function startWorkout() {
@@ -496,10 +520,8 @@
                 t1: { lift: day.t1, weight: t1Data.t1Weight, stage: t1Data.t1Stage, reps: Array(t1Cfg.sets).fill(null) },
                 t2: { lift: day.t2, weight: t2Data.t2Weight, stage: t2Data.t2Stage, reps: Array(t2Cfg.sets).fill(null) },
                 t3: { lift: day.t3, weight: stats.accessories[day.t3], reps: [null, null, null] }
-                t1: { lift: day.t1, weight: t1Data.t1Weight, stage: t1Data.t1Stage, reps: Array(t1Cfg.sets).fill(t1Cfg.reps) },
-                t2: { lift: day.t2, weight: t2Data.t2Weight, stage: t2Data.t2Stage, reps: Array(t2Cfg.sets).fill(t2Cfg.reps) },
-                t3: { lift: day.t3, weight: stats.accessories[day.t3], reps: [15, 15, 15] }
             };
+            persistActiveSession();
             renderTracker();
         }
 
@@ -508,7 +530,7 @@
             const t2Cfg = userConfig.schemes.T2[activeSession.t2.stage - 1];
             const t3Cfg = userConfig.schemes.T3;
             document.getElementById('app-content').innerHTML = `
-                <div class="space-y-6 pb-12" style="padding-bottom: calc(14.5rem + env(safe-area-inset-bottom));">
+                <div class="space-y-5 pb-8" style="padding-bottom: 10.5rem;">
                     <div class="flex justify-between items-center">
                         <span class="text-[10px] font-black text-indigo-400 uppercase tracking-widest italic">${activeSession.dayLabel} Quest</span>
                         <span class="text-[9px] text-slate-400 font-black uppercase">Log Reps</span>
@@ -520,30 +542,17 @@
 
                     <button onclick="saveWorkout()" class="w-full bg-white text-black p-6 rounded-[2.5rem] font-black text-lg italic uppercase shadow-2xl active:scale-95 transition-all">Submit Quest Result</button>
                 </div>
-                <div class="fixed left-6 right-6 z-40" style="bottom: calc(6.5rem + env(safe-area-inset-bottom));">
-                    <div class="glass-card p-3 rounded-2xl flex gap-2 justify-between">
-                        <button onclick="startTimer(90)" class="w-full bg-slate-800 text-[10px] font-black px-4 py-3 rounded-xl">90S REST</button>
-                        <button onclick="startTimer(180)" class="w-full bg-indigo-600 text-[10px] font-black px-4 py-3 rounded-xl">3M REST</button>
-                    </div>
-                </div>
-            document.getElementById('app-content').innerHTML = `
-                <div class="space-y-8 pb-12" style="padding-bottom: calc(12rem + env(safe-area-inset-bottom));">
-                    <div class="flex justify-between items-center">
-                        <span class="text-[10px] font-black text-indigo-400 uppercase tracking-widest italic">${activeSession.dayLabel} Quest</span>
-                        <div class="flex gap-2">
-                            <button onclick="startTimer(90)" class="bg-slate-800 text-[9px] font-black px-4 py-2 rounded-xl">90S REST</button>
-                            <button onclick="startTimer(180)" class="bg-indigo-600 text-[9px] font-black px-4 py-2 rounded-xl">3M REST</button>
+                <div id="timer-controls" class="fixed left-0 right-0 z-40" style="bottom: 4.8rem;">
+                    <div class="max-w-md mx-auto px-4">
+                        <div class="glass-card p-2 rounded-2xl flex gap-2 justify-between">
+                            <button onclick="startTimer(90)" class="w-full bg-slate-800 text-[11px] font-black px-3 py-3 rounded-xl">90S REST</button>
+                            <button onclick="startTimer(180)" class="w-full bg-indigo-600 text-[11px] font-black px-3 py-3 rounded-xl">3M REST</button>
                         </div>
                     </div>
-
-                    ${renderSection('t1', 'Tier 1 • Main Lift', 'indigo', activeSession.t1)}
-                    ${renderSection('t2', 'Tier 2 • Volume', 'slate', activeSession.t2)}
-                    ${renderSection('t3', 'Tier 3 • Accessory', 'emerald', activeSession.t3)}
-
-                    <button onclick="saveWorkout()" class="w-full bg-white text-black p-6 rounded-[2.5rem] font-black text-lg italic uppercase shadow-2xl active:scale-95 transition-all">Submit Quest Result</button>
                 </div>
             `;
             safeCreateIcons();
+            refreshTimerControlsVisibility();
         }
 
         function renderSection(tierKey, label, color, data, meta = {}) {
@@ -557,24 +566,12 @@
                     </div>
                 </div>
                 <div class="rep-grid">
-        function renderSection(tierKey, label, color, data) {
-            return `
-            <section class="glass-card p-6 rounded-[2.5rem] border-l-4 border-${color}-500">
-                <div class="mb-6">
-                    <span class="text-[9px] font-black text-${color}-400 uppercase tracking-widest">${label}</span>
-                    <h2 class="text-3xl font-black text-white italic uppercase tracking-tighter">${data.lift}</h2>
-                    <p class="mono text-${color}-300 text-sm font-bold">${data.weight}kg ${data.stage ? '• Stage ' + data.stage : ''}</p>
-                </div>
-                <div class="grid ${data.reps.length > 5 ? 'grid-cols-5' : 'grid-cols-3'} gap-3">
                     ${data.reps.map((r, i) => {
                         const isAmrap = i === data.reps.length - 1;
                         return `
                         <div class="flex flex-col items-center gap-1">
-                            <span class="text-[8px] font-black uppercase text-slate-500">${isAmrap ? 'AMRAP' : 'SET ' + (i+1)}</span>
-                            <input type="number" inputmode="numeric" pattern="[0-9]*" enterkeyhint="done" min="0" value="${r ?? ''}" placeholder="-" onchange="activeSession.${tierKey}.reps[${i}] = this.value === '' ? null : sanitizeRepValue(this.value); this.value = activeSession.${tierKey}.reps[${i}] ?? ''" 
-                                   class="rep-input w-full bg-black/40 border-2 ${isAmrap ? 'amrap-input' : 'border-slate-800'} rounded-xl text-center font-black italic text-white outline-none">
-                            <input type="number" min="0" value="${r}" onchange="activeSession.${tierKey}.reps[${i}] = sanitizeRepValue(this.value); this.value = activeSession.${tierKey}.reps[${i}]" 
-                                   class="w-full h-12 bg-black/40 border-2 ${isAmrap ? 'amrap-input' : 'border-slate-800'} rounded-xl text-center text-xl font-black italic text-white outline-none">
+                            <span class="text-[8px] font-black uppercase text-slate-500">${isAmrap ? 'AMRAP' : 'SET ' + (i + 1)}</span>
+                            <input type="number" inputmode="numeric" pattern="[0-9]*" enterkeyhint="done" min="0" value="${r == null ? '' : r}" placeholder="-" onchange="activeSession.${tierKey}.reps[${i}] = this.value === '' ? null : sanitizeRepValue(this.value); this.value = activeSession.${tierKey}.reps[${i}] == null ? '' : activeSession.${tierKey}.reps[${i}]; persistActiveSession()" class="rep-input w-full bg-black/40 border-2 ${isAmrap ? 'amrap-input' : 'border-slate-800'} rounded-xl text-center font-black italic text-white outline-none">
                         </div>`;
                     }).join('')}
                 </div>
@@ -588,37 +585,22 @@
             const t2Reps = normalizeReps(activeSession.t2.reps);
             const t3Reps = normalizeReps(activeSession.t3.reps);
             const amrapReps = t1Reps[t1Reps.length - 1];
-            
-            const t1Success = t1Reps.every(r => r >= t1Cfg.reps) && 
-                              t1Reps.reduce((a,b)=>a+b,0) >= t1Cfg.target;
-            
+
+            const t1Success = t1Reps.every(r => r >= t1Cfg.reps) && t1Reps.reduce((a, b) => a + b, 0) >= t1Cfg.target;
             const t2Cfg = userConfig.schemes.T2[activeSession.t2.stage - 1];
             const t2Success = t2Reps.every(r => r >= t2Cfg.reps);
-
             const t3Success = t3Reps[2] >= userConfig.schemes.T3.amrapTarget;
-            const amrapReps = activeSession.t1.reps[activeSession.t1.reps.length - 1];
-            
-            const t1Success = activeSession.t1.reps.every(r => r >= t1Cfg.reps) && 
-                              activeSession.t1.reps.reduce((a,b)=>a+b,0) >= t1Cfg.target;
-            
-            const t2Cfg = userConfig.schemes.T2[activeSession.t2.stage - 1];
-            const t2Success = activeSession.t2.reps.every(r => r >= t2Cfg.reps);
 
-            const t3Success = activeSession.t3.reps[2] >= userConfig.schemes.T3.amrapTarget;
-
-            // PR Detection
             const currentE1RM = calculateE1RM(activeSession.t1.weight, amrapReps);
             const isPR = currentE1RM > stats.lifts[activeSession.t1.lift].bestE1RM;
-            
-            // Streak XP Bonus
-            const streak = getStreakInfo() + 1; // +1 for the current session
-            const streakMultiplier = 1 + (Math.min(streak, 10) * 0.05); // Up to 50% bonus
+
+            const streak = getStreakInfo() + 1;
+            const streakMultiplier = 1 + (Math.min(streak, 10) * 0.05);
 
             let sessionXP = 150;
             if (t1Success) sessionXP += 50;
             if (isPR) sessionXP += 100;
             if (t3Success) sessionXP += 25;
-            
             const finalXP = Math.round(sessionXP * streakMultiplier);
 
             const sessionData = {
@@ -638,9 +620,6 @@
                 t3Lift: activeSession.t3.lift,
                 t3Weight: activeSession.t3.weight,
                 t3Reps,
-                t2Success,
-                t3Lift: activeSession.t3.lift,
-                t3Weight: activeSession.t3.weight,
                 t3Success,
                 xp: finalXP,
                 timestamp: Date.now()
@@ -648,7 +627,7 @@
 
             sessions.push(sessionData);
             if (canPersist) localStorage.setItem('gzclp_sessions', JSON.stringify(sessions));
-            activeSession = null;
+            clearActiveSession();
             stopTimer();
             renderSummary();
         }
@@ -680,9 +659,16 @@
             }
         }
 
-        function setActiveNav(id) { 
-            document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.replace('text-indigo-400', 'text-slate-500'));
-            document.getElementById(id).classList.replace('text-slate-500', 'text-indigo-400');
+        function setActiveNav(id) {
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('text-indigo-400');
+                btn.classList.add('text-slate-500');
+            });
+            const activeBtn = document.getElementById(id);
+            if (activeBtn) {
+                activeBtn.classList.remove('text-slate-500');
+                activeBtn.classList.add('text-indigo-400');
+            }
         }
 
         function renderHistory() {
@@ -747,6 +733,7 @@
         function initTimer() {
             const end = canPersist ? localStorage.getItem('gzclp_timer_end') : null;
             if (end && parseInt(end) > Date.now()) startTimerAt(parseInt(end));
+            else refreshTimerControlsVisibility();
         }
         function startTimer(seconds) {
             const end = Date.now() + (seconds * 1000);
@@ -758,6 +745,7 @@
             clearTimeout(timerHideTimeout);
             document.getElementById('rest-timer-ui').classList.remove('hidden');
             document.getElementById('timer-pill').classList.remove('timer-complete');
+            refreshTimerControlsVisibility();
             const update = () => {
                 const now = Date.now();
                 const remaining = Math.max(0, Math.ceil((endTimestamp - now) / 1000));
@@ -778,10 +766,18 @@
             clearTimeout(timerHideTimeout);
             if (clearStored && canPersist) localStorage.removeItem('gzclp_timer_end');
             document.getElementById('rest-timer-ui').classList.add('hidden');
+            refreshTimerControlsVisibility();
         }
-        function stopTimer() { clearInterval(timerInterval); if (canPersist) localStorage.removeItem('gzclp_timer_end'); document.getElementById('rest-timer-ui').classList.add('hidden'); }
+
+        function initActiveSession() {
+            const saved = loadJSON('gzclp_active_session', null);
+            if (saved && saved.t1 && saved.t2 && saved.t3) {
+                activeSession = saved;
+            }
+        }
 
         registerServiceWorker();
+        initActiveSession();
         initTimer();
         renderSummary();
         if (!canPersist) alert('Storage is unavailable in this browser context. Progress cannot be saved.');
