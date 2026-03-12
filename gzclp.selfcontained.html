@@ -338,7 +338,7 @@
         }
 
         function importBackup(event) {
-            const file = event.target.files && event.target.files[0];
+            const file = event.target.files?.[0];
             if (!file) return;
 
             const reader = new FileReader();
@@ -496,6 +496,9 @@
                 t1: { lift: day.t1, weight: t1Data.t1Weight, stage: t1Data.t1Stage, reps: Array(t1Cfg.sets).fill(null) },
                 t2: { lift: day.t2, weight: t2Data.t2Weight, stage: t2Data.t2Stage, reps: Array(t2Cfg.sets).fill(null) },
                 t3: { lift: day.t3, weight: stats.accessories[day.t3], reps: [null, null, null] }
+                t1: { lift: day.t1, weight: t1Data.t1Weight, stage: t1Data.t1Stage, reps: Array(t1Cfg.sets).fill(t1Cfg.reps) },
+                t2: { lift: day.t2, weight: t2Data.t2Weight, stage: t2Data.t2Stage, reps: Array(t2Cfg.sets).fill(t2Cfg.reps) },
+                t3: { lift: day.t3, weight: stats.accessories[day.t3], reps: [15, 15, 15] }
             };
             renderTracker();
         }
@@ -523,6 +526,22 @@
                         <button onclick="startTimer(180)" class="w-full bg-indigo-600 text-[10px] font-black px-4 py-3 rounded-xl">3M REST</button>
                     </div>
                 </div>
+            document.getElementById('app-content').innerHTML = `
+                <div class="space-y-8 pb-12" style="padding-bottom: calc(12rem + env(safe-area-inset-bottom));">
+                    <div class="flex justify-between items-center">
+                        <span class="text-[10px] font-black text-indigo-400 uppercase tracking-widest italic">${activeSession.dayLabel} Quest</span>
+                        <div class="flex gap-2">
+                            <button onclick="startTimer(90)" class="bg-slate-800 text-[9px] font-black px-4 py-2 rounded-xl">90S REST</button>
+                            <button onclick="startTimer(180)" class="bg-indigo-600 text-[9px] font-black px-4 py-2 rounded-xl">3M REST</button>
+                        </div>
+                    </div>
+
+                    ${renderSection('t1', 'Tier 1 • Main Lift', 'indigo', activeSession.t1)}
+                    ${renderSection('t2', 'Tier 2 • Volume', 'slate', activeSession.t2)}
+                    ${renderSection('t3', 'Tier 3 • Accessory', 'emerald', activeSession.t3)}
+
+                    <button onclick="saveWorkout()" class="w-full bg-white text-black p-6 rounded-[2.5rem] font-black text-lg italic uppercase shadow-2xl active:scale-95 transition-all">Submit Quest Result</button>
+                </div>
             `;
             safeCreateIcons();
         }
@@ -538,13 +557,24 @@
                     </div>
                 </div>
                 <div class="rep-grid">
+        function renderSection(tierKey, label, color, data) {
+            return `
+            <section class="glass-card p-6 rounded-[2.5rem] border-l-4 border-${color}-500">
+                <div class="mb-6">
+                    <span class="text-[9px] font-black text-${color}-400 uppercase tracking-widest">${label}</span>
+                    <h2 class="text-3xl font-black text-white italic uppercase tracking-tighter">${data.lift}</h2>
+                    <p class="mono text-${color}-300 text-sm font-bold">${data.weight}kg ${data.stage ? '• Stage ' + data.stage : ''}</p>
+                </div>
+                <div class="grid ${data.reps.length > 5 ? 'grid-cols-5' : 'grid-cols-3'} gap-3">
                     ${data.reps.map((r, i) => {
                         const isAmrap = i === data.reps.length - 1;
                         return `
                         <div class="flex flex-col items-center gap-1">
                             <span class="text-[8px] font-black uppercase text-slate-500">${isAmrap ? 'AMRAP' : 'SET ' + (i+1)}</span>
-                            <input type="number" inputmode="numeric" pattern="[0-9]*" enterkeyhint="done" min="0" value="${r === null ? '' : r}" placeholder="-" onchange="activeSession.${tierKey}.reps[${i}] = this.value === '' ? null : sanitizeRepValue(this.value); this.value = activeSession.${tierKey}.reps[${i}] === null ? '' : activeSession.${tierKey}.reps[${i}]" 
+                            <input type="number" inputmode="numeric" pattern="[0-9]*" enterkeyhint="done" min="0" value="${r ?? ''}" placeholder="-" onchange="activeSession.${tierKey}.reps[${i}] = this.value === '' ? null : sanitizeRepValue(this.value); this.value = activeSession.${tierKey}.reps[${i}] ?? ''" 
                                    class="rep-input w-full bg-black/40 border-2 ${isAmrap ? 'amrap-input' : 'border-slate-800'} rounded-xl text-center font-black italic text-white outline-none">
+                            <input type="number" min="0" value="${r}" onchange="activeSession.${tierKey}.reps[${i}] = sanitizeRepValue(this.value); this.value = activeSession.${tierKey}.reps[${i}]" 
+                                   class="w-full h-12 bg-black/40 border-2 ${isAmrap ? 'amrap-input' : 'border-slate-800'} rounded-xl text-center text-xl font-black italic text-white outline-none">
                         </div>`;
                     }).join('')}
                 </div>
@@ -566,6 +596,15 @@
             const t2Success = t2Reps.every(r => r >= t2Cfg.reps);
 
             const t3Success = t3Reps[2] >= userConfig.schemes.T3.amrapTarget;
+            const amrapReps = activeSession.t1.reps[activeSession.t1.reps.length - 1];
+            
+            const t1Success = activeSession.t1.reps.every(r => r >= t1Cfg.reps) && 
+                              activeSession.t1.reps.reduce((a,b)=>a+b,0) >= t1Cfg.target;
+            
+            const t2Cfg = userConfig.schemes.T2[activeSession.t2.stage - 1];
+            const t2Success = activeSession.t2.reps.every(r => r >= t2Cfg.reps);
+
+            const t3Success = activeSession.t3.reps[2] >= userConfig.schemes.T3.amrapTarget;
 
             // PR Detection
             const currentE1RM = calculateE1RM(activeSession.t1.weight, amrapReps);
@@ -599,6 +638,9 @@
                 t3Lift: activeSession.t3.lift,
                 t3Weight: activeSession.t3.weight,
                 t3Reps,
+                t2Success,
+                t3Lift: activeSession.t3.lift,
+                t3Weight: activeSession.t3.weight,
                 t3Success,
                 xp: finalXP,
                 timestamp: Date.now()
@@ -737,6 +779,7 @@
             if (clearStored && canPersist) localStorage.removeItem('gzclp_timer_end');
             document.getElementById('rest-timer-ui').classList.add('hidden');
         }
+        function stopTimer() { clearInterval(timerInterval); if (canPersist) localStorage.removeItem('gzclp_timer_end'); document.getElementById('rest-timer-ui').classList.add('hidden'); }
 
         registerServiceWorker();
         initTimer();
