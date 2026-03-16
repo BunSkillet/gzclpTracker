@@ -257,15 +257,12 @@
         }
 
         let userConfig = loadJSON('gzclp_config', JSON.parse(JSON.stringify(DEFAULT_CONFIG)));
-        if (!Number.isFinite(userConfig.bodyweight) || userConfig.bodyweight <= 0) userConfig.bodyweight = DEFAULT_CONFIG.bodyweight;
         let sessions = loadJSON('gzclp_sessions', []).map(normalizeSession).filter(Boolean);
         let activeSession = null;
         let timerInterval = null;
         let timerHideTimeout = null;
         let autoExportOnSubmit = loadJSON('gzclp_auto_export', false);
         let backupFileHandle = null;
-        let submitConfirmArmed = false;
-        let submitConfirmTimeout = null;
 
         // --- MATH UTILS ---
         function calculateE1RM(weight, reps) {
@@ -562,7 +559,7 @@
                         <div class="glass-card p-5 rounded-3xl">
                              <span class="text-[9px] font-black text-slate-500 uppercase tracking-widest block mb-2">Rank</span>
                              <div class="text-xl font-black italic text-indigo-400 uppercase">${weightRank.rank}</div>
-                             <p class="text-[8px] text-slate-500 font-bold uppercase mt-1">Total ${weightRank.total}kg • Ratio ${weightRank.strengthRatio}</p>
+                             <p class="text-[8px] text-slate-500 font-bold uppercase mt-1">${escapeHTML(weightRank.strongestLift)}: ${weightRank.strongestWeight}kg</p>
                         </div>
                     </div>
 
@@ -654,7 +651,7 @@
             const t2Cfg = userConfig.schemes.T2[activeSession.t2.stage - 1];
             const t3Cfg = userConfig.schemes.T3;
             document.getElementById('app-content').innerHTML = `
-                <div class="space-y-4 pb-8" style="padding-bottom: 6.75rem;">
+                <div class="space-y-5 pb-8" style="padding-bottom: 6.75rem;">
                     <div class="flex justify-between items-center">
                         <span class="text-[10px] font-black text-indigo-400 uppercase tracking-widest italic">${activeSession.dayLabel} Quest</span>
                         <span class="text-[9px] text-slate-400 font-black uppercase">Log Reps</span>
@@ -669,7 +666,7 @@
                         <input type="text" value="${escapeAttr(activeSession.notes || '')}" placeholder="How did this session feel?" onchange="activeSession.notes=this.value;persistActiveSession();" class="w-full bg-black/30 border border-white/10 rounded-xl p-3 text-white text-sm">
                     </div>
 
-                    <button onclick="handleSubmitPress()" class="w-full bg-white text-black p-6 mt-4 rounded-[2.5rem] font-black text-lg italic uppercase shadow-2xl active:scale-95 transition-all">${submitConfirmArmed ? 'Press Again to Confirm' : 'Submit Quest Result'}</button>
+                    <button onclick="saveWorkout()" class="w-full bg-white text-black p-6 mt-4 rounded-[2.5rem] font-black text-lg italic uppercase shadow-2xl active:scale-95 transition-all">Submit Quest Result</button>
                 </div>
                 <div id="timer-controls" class="fixed left-6 right-6 z-40" style="bottom: calc(6.5rem + env(safe-area-inset-bottom));">
                     <div class="glass-card p-3 rounded-2xl flex gap-2 justify-between">
@@ -788,27 +785,26 @@
         }
 
         function getWeightRank() {
-            const squatBest = Math.max(...sessions.filter(s => s.t1Lift === 'Squat').map(s => s.t1Weight || 0), userConfig.lifts['Squat']?.t1Start || 0);
-            const benchBest = Math.max(...sessions.filter(s => s.t1Lift === 'Bench Press').map(s => s.t1Weight || 0), userConfig.lifts['Bench Press']?.t1Start || 0);
-            const deadliftBest = Math.max(...sessions.filter(s => s.t1Lift === 'Deadlift').map(s => s.t1Weight || 0), userConfig.lifts['Deadlift']?.t1Start || 0);
-            const total = squatBest + benchBest + deadliftBest;
-            const bodyweight = Number.isFinite(userConfig.bodyweight) && userConfig.bodyweight > 0 ? userConfig.bodyweight : DEFAULT_CONFIG.bodyweight;
-            const strengthRatio = bodyweight > 0 ? total / bodyweight : 0;
+            const stats = getLiftStats();
+            const strongestEntry = Object.entries(stats.lifts).reduce((best, entry) => {
+                if (!best || entry[1].t1Weight > best[1].t1Weight) return entry;
+                return best;
+            }, null);
+            if (!strongestEntry) return { rank: 'Rookie', strongestWeight: 0, strongestLift: '', startWeight: 0 };
 
-            let rank = 'Beginner';
-            if (strengthRatio >= 5.5) rank = 'Expert';
-            else if (strengthRatio >= 4.0) rank = 'Advanced';
-            else if (strengthRatio >= 2.5) rank = 'Intermediate';
+            const [strongestLift, strongestData] = strongestEntry;
+            const strongestWeight = strongestData.t1Weight || 0;
+            const startWeight = userConfig.lifts[strongestLift]?.t1Start || strongestWeight || 1;
+            const relativeGain = startWeight > 0 ? (strongestWeight - startWeight) / startWeight : 0;
 
-            return {
-                rank,
-                bodyweight,
-                squatBest,
-                benchBest,
-                deadliftBest,
-                total,
-                strengthRatio: Number(strengthRatio.toFixed(2))
-            };
+            const rank = strongestWeight >= 140 || relativeGain >= 0.60 ? 'Warlord'
+                : strongestWeight >= 110 || relativeGain >= 0.40 ? 'Knight'
+                : strongestWeight >= 80 || relativeGain >= 0.25 ? 'Expert'
+                : strongestWeight >= 65 || relativeGain >= 0.12 ? 'Warrior'
+                : 'Rookie';
+
+            const relativePct = Math.max(0, Math.round(relativeGain * 100));
+            return { rank, strongestWeight, strongestLift, startWeight, relativePct };
         }
 
         function getXPStats() {
@@ -826,7 +822,7 @@
             document.getElementById('total-xp').innerText = xp.total.toString().padStart(4, '0');
             document.getElementById('user-rank-badge').innerText = `${weightRank.rank} Rank`;
             const rankContext = document.getElementById('rank-context');
-            if (rankContext) rankContext.innerText = `BW ${weightRank.bodyweight}kg • Total ${weightRank.total}kg • Ratio ${weightRank.strengthRatio}`;
+            if (rankContext) rankContext.innerText = `${weightRank.strongestLift || 'Lift'} ${weightRank.strongestWeight || 0}kg • +${weightRank.relativePct || 0}% from start`;
             document.getElementById('current-level').innerText = `Level ${xp.level}`;
             document.getElementById('next-level-req').innerText = `${xp.remaining} XP to next`;
             document.getElementById('xp-bar-fill').style.width = `${xp.progress}%`;
@@ -918,7 +914,7 @@
                             </div>
                             <div class="space-y-1">
                                 <p class="text-white font-black italic uppercase text-sm">${escapeHTML(s.t1Lift)} <span class="${s.t1Success ? 'text-indigo-400' : 'text-rose-500'} ml-2">${s.t1Weight}kg</span></p>
-                                <p class="text-[9px] font-bold text-slate-500 uppercase">T1: ${s.t1Success ? 'Pass' : 'Fail'} • T2: ${escapeHTML(s.t2Lift)} (${s.t2Success ? 'Pass' : 'Fail'}) • T3: ${escapeHTML(s.t3Lift)} (${s.t3Success ? 'Gain' : 'Stay'})</p>
+                                <p class="text-[9px] font-bold text-slate-500 uppercase">T2: ${escapeHTML(s.t2Lift)} (${s.t2Success ? 'Pass' : 'Fail'}) • T3: ${escapeHTML(s.t3Lift)} (${s.t3Success ? 'Gain' : 'Stay'})</p>
                                 <p class="text-[9px] font-bold text-slate-500 uppercase">Duration: ${formatDuration(s.durationMs || 0)} • T1 Vol: ${(s.t1Reps || []).reduce((a,b)=>a+b,0)} reps</p>
                                 <p class="text-[9px] font-bold text-slate-500 uppercase">AMRAP: ${(s.t1Reps || [0]).slice(-1)[0]} • E1RM: ${s.t1e1rm || 0}kg</p>
                                 ${s.notes ? `<p class="text-[10px] text-slate-300 font-bold">📝 ${escapeHTML(s.notes)}</p>` : ''}
