@@ -204,11 +204,12 @@
     <nav class="fixed bottom-0 left-0 right-0 bg-[#0f172a]/90 backdrop-blur-lg border-t border-white/5 px-5 py-3 flex justify-between items-center max-w-md mx-auto z-40">
         <button onclick="renderSummary()" class="nav-btn flex flex-col items-center gap-1 text-indigo-400" id="nav-summary"><i data-lucide="layout-grid"></i><span class="text-[10px] font-black uppercase">Hero</span></button>
         <button onclick="renderHistory()" class="nav-btn flex flex-col items-center gap-1 text-slate-500" id="nav-history"><i data-lucide="scroll"></i><span class="text-[10px] font-black uppercase">Log</span></button>
-        <button onclick="renderSettings()" class="nav-btn flex flex-col items-center gap-1 text-slate-500" id="nav-settings"><i data-lucide="swords"></i><span class="text-[10px] font-black uppercase">Armory</span></button>
+        <button onclick="renderSettings()" class="nav-btn flex flex-col items-center gap-1 text-slate-500" id="nav-settings"><i data-lucide="swords"></i><span class="text-[10px] font-black uppercase">Armoury</span></button>
     </nav>
 
     <script>
         const DEFAULT_CONFIG = {
+            bodyweight: 80,
             lifts: {
                 'Squat': { t1Inc: 5, t2Inc: 5, t1Start: 60, t2Start: 45 },
                 'Bench Press': { t1Inc: 2.5, t2Inc: 2.5, t1Start: 50, t2Start: 40 },
@@ -484,7 +485,7 @@
 
             for (const dayStart of uniqueDayStarts) {
                 const diffDays = (lastDayStart - dayStart) / msPerDay;
-                if (diffDays <= 3.5) { // Allows every-other-day training cadence with a small buffer
+                if (diffDays <= 4.5) { // Allows up to 4 days between sessions with a small buffer
                     streak++;
                     lastDayStart = dayStart;
                 } else {
@@ -603,8 +604,46 @@
                 t2: { lift: day.t2, weight: t2Data.t2Weight, stage: t2Data.t2Stage, reps: Array(t2Cfg.sets).fill(null) },
                 t3: { lift: day.t3, weight: stats.accessories[day.t3], reps: [null, null, null] }
             };
+            submitConfirmArmed = false;
             persistActiveSession();
             renderTracker();
+        }
+
+
+        function getPreviousAmrap(tierKey, liftName) {
+            const key = tierKey === 't1' ? 't1Lift' : 't3Lift';
+            const repsKey = tierKey === 't1' ? 't1Reps' : 't3Reps';
+            const previous = [...sessions].reverse().find(s => s[key] === liftName && Array.isArray(s[repsKey]) && s[repsKey].length > 0);
+            return previous ? (previous[repsKey][previous[repsKey].length - 1] || 0) : null;
+        }
+
+        function getAmrapDeltaText(tierKey, liftName) {
+            const previous = getPreviousAmrap(tierKey, liftName);
+            if (previous == null) return 'AMRAP baseline';
+            const currentReps = activeSession && activeSession[tierKey] && Array.isArray(activeSession[tierKey].reps)
+                ? activeSession[tierKey].reps[activeSession[tierKey].reps.length - 1]
+                : null;
+            if (currentReps == null || currentReps === '') return `Last AMRAP: ${previous}`;
+            const current = sanitizeRepValue(currentReps);
+            const diff = current - previous;
+            const sign = diff > 0 ? '+' : '';
+            return `Last AMRAP ${previous} (${sign}${diff})`;
+        }
+
+        function handleSubmitPress() {
+            if (!submitConfirmArmed) {
+                submitConfirmArmed = true;
+                if (submitConfirmTimeout) clearTimeout(submitConfirmTimeout);
+                submitConfirmTimeout = setTimeout(() => {
+                    submitConfirmArmed = false;
+                    renderTracker();
+                }, 4000);
+                renderTracker();
+                return;
+            }
+            submitConfirmArmed = false;
+            if (submitConfirmTimeout) clearTimeout(submitConfirmTimeout);
+            saveWorkout();
         }
 
         function renderTracker() {
@@ -618,9 +657,14 @@
                         <span class="text-[9px] text-slate-400 font-black uppercase">Log Reps</span>
                     </div>
 
-                    ${renderSection('t1', 'Tier 1 • Main Lift', 'indigo', activeSession.t1, { scheme: `${t1Cfg.sets}x${t1Cfg.reps}+` })}
-                    ${renderSection('t2', 'Tier 2 • Volume', 'slate', activeSession.t2, { scheme: `${t2Cfg.sets}x${t2Cfg.reps}` })}
-                    ${renderSection('t3', 'Tier 3 • Accessory', 'emerald', activeSession.t3, { scheme: `${t3Cfg.sets}x${t3Cfg.reps}+` })}
+                    ${renderSection('t1', 'Tier 1 • Main Lift', 'indigo', activeSession.t1, { scheme: `${t1Cfg.sets}x${t1Cfg.reps}+`, hasAmrap: true, amrapDelta: getAmrapDeltaText('t1', activeSession.t1.lift) })}
+                    ${renderSection('t2', 'Tier 2 • Volume', 'slate', activeSession.t2, { scheme: `${t2Cfg.sets}x${t2Cfg.reps}`, hasAmrap: false })}
+                    ${renderSection('t3', 'Tier 3 • Accessory', 'emerald', activeSession.t3, { scheme: `${t3Cfg.sets}x${t3Cfg.reps}+`, hasAmrap: true, amrapDelta: getAmrapDeltaText('t3', activeSession.t3.lift) })}
+
+                    <div class="glass-card p-4 rounded-2xl">
+                        <p class="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-2">Session Notes</p>
+                        <input type="text" value="${escapeAttr(activeSession.notes || '')}" placeholder="How did this session feel?" onchange="activeSession.notes=this.value;persistActiveSession();" class="w-full bg-black/30 border border-white/10 rounded-xl p-3 text-white text-sm">
+                    </div>
 
                     <button onclick="saveWorkout()" class="w-full bg-white text-black p-6 mt-4 rounded-[2.5rem] font-black text-lg italic uppercase shadow-2xl active:scale-95 transition-all">Submit Quest Result</button>
                 </div>
@@ -647,13 +691,15 @@
                 </div>
                 <div class="rep-grid">
                     ${data.reps.map((r, i) => {
-                        const isAmrap = i === data.reps.length - 1;
+                        const hasAmrap = !!meta.hasAmrap;
+                        const isAmrap = hasAmrap && i === data.reps.length - 1;
                         return `
                         <div class="flex flex-col items-center gap-1">
                             <span class="text-[8px] font-black uppercase text-slate-500">${isAmrap ? 'AMRAP' : 'SET ' + (i + 1)}</span>
-                            <input type="number" inputmode="numeric" pattern="[0-9]*" enterkeyhint="done" min="0" value="${r == null ? '' : r}" placeholder="-" onchange="activeSession.${tierKey}.reps[${i}] = this.value === '' ? null : sanitizeRepValue(this.value); this.value = activeSession.${tierKey}.reps[${i}] == null ? '' : activeSession.${tierKey}.reps[${i}]" class="rep-input w-full bg-black/40 border-2 ${isAmrap ? 'amrap-input' : 'border-slate-800'} rounded-xl text-center font-black italic text-white outline-none">
+                            <input type="number" inputmode="numeric" pattern="[0-9]*" enterkeyhint="done" min="0" value="${r == null ? '' : r}" placeholder="-" onchange="activeSession.${tierKey}.reps[${i}] = this.value === '' ? null : sanitizeRepValue(this.value); this.value = activeSession.${tierKey}.reps[${i}] == null ? '' : activeSession.${tierKey}.reps[${i}]; persistActiveSession(); renderTracker();" class="rep-input w-full bg-black/40 border-2 ${isAmrap ? 'amrap-input' : 'border-slate-800'} rounded-xl text-center font-black italic text-white outline-none">
                         </div>`;
                     }).join('')}
+                    ${meta.amrapDelta ? `<p class="text-[9px] font-black text-slate-400 uppercase mt-2">${meta.amrapDelta}</p>` : ''}
                 </div>
             </section>`;
         }
@@ -729,6 +775,7 @@
             };
 
             sessions.push(sessionData);
+            submitConfirmArmed = false;
             if (canPersist) localStorage.setItem('gzclp_sessions', JSON.stringify(sessions));
             clearActiveSession();
             stopTimer();
@@ -801,18 +848,69 @@
             }
         }
 
+
+        function parseRepCSV(input, expectedCount) {
+            const raw = String(input || '').split(',').map(v => sanitizeRepValue(v.trim()));
+            const out = [];
+            for (let i = 0; i < expectedCount; i++) out.push(Number.isFinite(raw[i]) ? raw[i] : 0);
+            return out;
+        }
+
+        function editSession(sessionIndex) {
+            const s = sessions[sessionIndex];
+            if (!s) return;
+            const t1Weight = prompt('Edit T1 weight (kg):', s.t1Weight ?? 0);
+            if (t1Weight === null) return;
+            const t1RepsRaw = prompt('Edit T1 reps as comma list:', (s.t1Reps || []).join(','));
+            if (t1RepsRaw === null) return;
+            const t2Weight = prompt('Edit T2 weight (kg):', s.t2Weight ?? 0);
+            if (t2Weight === null) return;
+            const t2RepsRaw = prompt('Edit T2 reps as comma list:', (s.t2Reps || []).join(','));
+            if (t2RepsRaw === null) return;
+            const t3Weight = prompt('Edit T3 weight (kg):', s.t3Weight ?? 0);
+            if (t3Weight === null) return;
+            const t3RepsRaw = prompt('Edit T3 reps as comma list:', (s.t3Reps || []).join(','));
+            if (t3RepsRaw === null) return;
+            const notes = prompt('Edit notes:', s.notes || '');
+            if (notes === null) return;
+
+            const t1Reps = parseRepCSV(t1RepsRaw, (s.t1Reps || []).length || 1);
+            const t2Reps = parseRepCSV(t2RepsRaw, (s.t2Reps || []).length || 1);
+            const t3Reps = parseRepCSV(t3RepsRaw, (s.t3Reps || []).length || 1);
+            const t1Cfg = userConfig.schemes.T1[(s.t1Stage || 1) - 1] || userConfig.schemes.T1[0];
+            const t2Cfg = userConfig.schemes.T2[(s.t2Stage || 1) - 1] || userConfig.schemes.T2[0];
+
+            s.t1Weight = parseFloat(t1Weight) || 0;
+            s.t2Weight = parseFloat(t2Weight) || 0;
+            s.t3Weight = parseFloat(t3Weight) || 0;
+            s.t1Reps = t1Reps;
+            s.t2Reps = t2Reps;
+            s.t3Reps = t3Reps;
+            s.notes = String(notes).slice(0, 280);
+            s.t1Success = t1Reps.every(r => r >= t1Cfg.reps) && t1Reps.reduce((a, b) => a + b, 0) >= t1Cfg.target;
+            s.t2Success = t2Reps.every(r => r >= t2Cfg.reps);
+            s.t3Success = t3Reps[t3Reps.length - 1] >= userConfig.schemes.T3.amrapTarget;
+            s.t1e1rm = calculateE1RM(s.t1Weight, t1Reps[t1Reps.length - 1] || 0);
+
+            sessions[sessionIndex] = normalizeSession(s);
+            if (canPersist) localStorage.setItem('gzclp_sessions', JSON.stringify(sessions));
+            renderHistory();
+            showToast('Workout updated');
+        }
+
         function renderHistory() {
             setActiveNav('nav-history');
             let html = `<div class="space-y-4 pb-10"><h2 class="text-2xl font-black text-white italic tracking-tighter uppercase">Quest Log</h2>`;
             if (sessions.length === 0) html += `<p class="text-slate-500 p-10 text-center font-bold italic uppercase tracking-widest text-[10px]">Empty Chronicles...</p>`;
             else {
-                [...sessions].reverse().forEach(s => {
+                [...sessions].reverse().forEach((s, reverseIdx) => {
+                    const sessionIndex = sessions.length - 1 - reverseIdx;
                     html += `
                         <div class="glass-card p-5 rounded-3xl border border-white/5 relative overflow-hidden">
                             ${s.isPR ? '<div class="absolute top-0 right-0 bg-orange-500 text-[8px] font-black px-2 py-0.5 rounded-bl-lg">NEW PR</div>' : ''}
                             <div class="flex justify-between items-center mb-3">
                                 <span class="text-[9px] font-black text-indigo-400 uppercase tracking-widest">${s.date}</span>
-                                <div class="bg-indigo-500/10 text-indigo-400 px-2 py-0.5 rounded text-[10px] font-black">+${s.xp} XP</div>
+                                <div class="flex items-center gap-2"><div class="bg-indigo-500/10 text-indigo-400 px-2 py-0.5 rounded text-[10px] font-black">+${s.xp} XP</div><button onclick="editSession(${sessionIndex})" class="bg-slate-800 text-white px-2 py-0.5 rounded text-[9px] font-black uppercase">Edit</button></div>
                             </div>
                             <div class="space-y-1">
                                 <p class="text-white font-black italic uppercase text-sm">${escapeHTML(s.t1Lift)} <span class="${s.t1Success ? 'text-indigo-400' : 'text-rose-500'} ml-2">${s.t1Weight}kg</span></p>
@@ -831,7 +929,11 @@
             setActiveNav('nav-settings');
             document.getElementById('app-content').innerHTML = `
                 <div class="space-y-6 pb-8">
-                    <h2 class="text-2xl font-black text-white italic tracking-tighter uppercase">The Armory</h2>
+                    <h2 class="text-2xl font-black text-white italic tracking-tighter uppercase">The Armoury</h2>
+                    <div class="glass-card p-6 rounded-[2rem] space-y-3">
+                        <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Bodyweight</p>
+                        <input type="number" value="${userConfig.bodyweight}" onchange="userConfig.bodyweight=parseFloat(this.value)||${DEFAULT_CONFIG.bodyweight}; saveConfig(); renderSettings();" class="w-full bg-slate-900 border border-white/5 rounded-lg p-3 text-white font-bold text-sm" placeholder="Bodyweight (kg)">
+                    </div>
                     <div class="glass-card p-6 rounded-[2rem] space-y-4">
                         <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Base Weight Calibration</p>
                         ${Object.entries(userConfig.lifts).map(([name, lift]) => `
@@ -839,6 +941,20 @@
                                 <h4 class="text-xs font-black text-white italic uppercase">${name}</h4>
                                 <input type="number" value="${lift.t1Start}" onchange="userConfig.lifts['${name}'].t1Start=parseFloat(this.value); saveConfig()"
                                        class="w-20 bg-slate-900 border border-white/5 rounded-lg p-2 text-white font-bold text-xs">
+                            </div>
+                        `).join('')}
+                    </div>
+
+
+                    <div class="glass-card p-6 rounded-[2rem] space-y-4">
+                        <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Accessory Calibration</p>
+                        ${Object.entries(userConfig.accessories).map(([name, cfg]) => `
+                            <div class="p-4 bg-black/30 rounded-2xl border border-white/5 space-y-2">
+                                <h4 class="text-xs font-black text-white italic uppercase">${name}</h4>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <input type="number" value="${cfg.weight}" onchange="userConfig.accessories['${name}'].weight=parseFloat(this.value)||0; saveConfig()" class="bg-slate-900 border border-white/5 rounded-lg p-2 text-white font-bold text-xs" placeholder="Start weight">
+                                    <input type="number" value="${cfg.inc}" onchange="userConfig.accessories['${name}'].inc=parseFloat(this.value)||0; saveConfig()" class="bg-slate-900 border border-white/5 rounded-lg p-2 text-white font-bold text-xs" placeholder="Increment">
+                                </div>
                             </div>
                         `).join('')}
                     </div>
